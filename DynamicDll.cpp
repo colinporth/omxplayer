@@ -1,3 +1,4 @@
+//{{{
 /*
  *      Copyright (C) 2005-2008 Team XBMC
  *      http://www.xbmc.org
@@ -18,28 +19,34 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
-
+//}}}
 #include "DynamicDll.h"
 #include "utils/log.h"
 
+//{{{
 DllDynamic::DllDynamic()
 {
   m_dll=NULL;
   m_DelayUnload=true;
 }
-
+//}}}
+//{{{
 DllDynamic::DllDynamic(const CStdString& strDllName)
 {
   m_strDllName=strDllName;
   m_dll=NULL;
   m_DelayUnload=true;
 }
+//}}}
 
+//{{{
 DllDynamic::~DllDynamic()
 {
   Unload();
 }
+//}}}
 
+//{{{
 bool DllDynamic::Load()
 {
   if (m_dll)
@@ -59,7 +66,8 @@ bool DllDynamic::Load()
 
   return true;
 }
-
+//}}}
+//{{{
 void DllDynamic::Unload()
 {
   /*
@@ -68,12 +76,15 @@ void DllDynamic::Unload()
   */
   m_dll=NULL;
 }
-
+//}}}
+//{{{
 bool DllDynamic::CanLoad()
 {
   return true;
 }
+//}}}
 
+//{{{
 bool DllDynamic::EnableDelayedUnload(bool bOnOff)
 {
   if (m_dll)
@@ -83,7 +94,9 @@ bool DllDynamic::EnableDelayedUnload(bool bOnOff)
 
   return true;
 }
+//}}}
 
+//{{{
 bool DllDynamic::SetFile(const CStdString& strDllName)
 {
   if (m_dll)
@@ -92,4 +105,4 @@ bool DllDynamic::SetFile(const CStdString& strDllName)
   m_strDllName=strDllName;
   return true;
 }
-
+//}}}

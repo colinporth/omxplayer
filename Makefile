@@ -68,7 +68,7 @@ SRC=        linux/XMemUtils.cpp \
 
 OBJS+=$(filter %.o,$(SRC:.cpp=.o))
 
-all: omxplayer.bin
+all: omxplayer
 
 %.o: %.cpp
 	rm -f $@
@@ -79,9 +79,9 @@ omxplayer.o: help.h keys.h
 version:
 	bash gen_version.sh > version.h
 
-omxplayer.bin: version $(OBJS)
-	$(CXX) $(LDFLAGS) -o omxplayer.bin $(OBJS)
-#        $(STRIP) omxplayer.bin
+omxplayer: version $(OBJS)
+	$(CXX) $(LDFLAGS) -o omxplayer $(OBJS)
+#        $(STRIP) omxplayer
 
 help.h: README.md Makefile
 	awk '/SYNOPSIS/{p=1;print;next} p&&/KEY BINDINGS/{p=0};p' $< \
@@ -95,7 +95,7 @@ keys.h: README.md Makefile
 clean:
 	rm -f *.o
 	rm -f omxplayer.old.log omxplayer.log
-	rm -f omxplayer.bin
+	rm -f omxplayer
 
 ifndef LOGNAME
 SDKSTAGE  = /SysGCC/Raspberry/arm-linux-gnueabihf/sysroot

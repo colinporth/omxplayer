@@ -1,3 +1,4 @@
+//{{{
 /*
  *      Copyright (C) 2005-2008 Team XBMC
  *      http://www.xbmc.org
@@ -18,7 +19,8 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
-
+//}}}
+//{{{
 #if (defined HAVE_CONFIG_H) && (!defined WIN32)
   #include "config.h"
 #elif defined(_WIN32)
@@ -32,6 +34,7 @@
 #include <unistd.h>
 
 #include "linux/XMemUtils.h"
+//}}}
 
 #define MAX_DATA_SIZE_VIDEO    8 * 1024 * 1024
 #define MAX_DATA_SIZE_AUDIO    2 * 1024 * 1024
@@ -43,19 +46,24 @@ static int64_t timeout_start;
 static int64_t timeout_default_duration;
 static int64_t timeout_duration;
 
+//{{{
 static int64_t CurrentHostCounter(void)
 {
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
   return( ((int64_t)now.tv_sec * 1000000000LL) + now.tv_nsec );
 }
+//}}}
 
+//{{{
 #define RESET_TIMEOUT(x) do { \
   timeout_start = CurrentHostCounter(); \
   timeout_duration = (x) * timeout_default_duration; \
 } while (0)
 
+//}}}
 
+//{{{
 OMXReader::OMXReader()
 {
   m_open        = false;
@@ -77,24 +85,30 @@ OMXReader::OMXReader()
 
   pthread_mutex_init(&m_lock, NULL);
 }
-
+//}}}
+//{{{
 OMXReader::~OMXReader()
 {
   Close();
 
   pthread_mutex_destroy(&m_lock);
 }
+//}}}
 
+//{{{
 void OMXReader::Lock()
 {
   pthread_mutex_lock(&m_lock);
 }
-
+//}}}
+//{{{
 void OMXReader::UnLock()
 {
   pthread_mutex_unlock(&m_lock);
 }
+//}}}
 
+//{{{
 static int interrupt_cb(void *unused)
 {
   int ret = 0;
@@ -110,7 +124,8 @@ static int interrupt_cb(void *unused)
   }
   return ret;
 }
-
+//}}}
+//{{{
 static int dvd_file_read(void *h, uint8_t* buf, int size)
 {
   RESET_TIMEOUT(1);
@@ -120,7 +135,8 @@ static int dvd_file_read(void *h, uint8_t* buf, int size)
   XFILE::CFile *pFile = (XFILE::CFile *)h;
   return pFile->Read(buf, size);
 }
-
+//}}}
+//{{{
 static offset_t dvd_file_seek(void *h, offset_t pos, int whence)
 {
   RESET_TIMEOUT(1);
@@ -133,7 +149,9 @@ static offset_t dvd_file_seek(void *h, offset_t pos, int whence)
   else
     return pFile->Seek(pos, whence & ~AVSEEK_FORCE);
 }
+//}}}
 
+//{{{
 bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false */, float timeout /* = 0.0f */, std::string cookie /* = "" */, std::string user_agent /* = "" */, std::string lavfdopts /* = "" */, std::string avdict /* = "" */)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load())
@@ -141,7 +159,7 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
 
   timeout_default_duration = (int64_t) (timeout * 1e9);
   m_iCurrentPts = DVD_NOPTS_VALUE;
-  m_filename    = filename; 
+  m_filename    = filename;
   m_speed       = DVD_PLAYSPEED_NORMAL;
   m_program     = UINT_MAX;
   const AVIOInterruptCB int_cb = { interrupt_cb, NULL };
@@ -329,7 +347,8 @@ bool OMXReader::Open(std::string filename, bool dump_format, bool live /* =false
 
   return true;
 }
-
+//}}}
+//{{{
 void OMXReader::ClearStreams()
 {
   m_audio_index     = -1;
@@ -358,7 +377,8 @@ void OMXReader::ClearStreams()
 
   m_program     = UINT_MAX;
 }
-
+//}}}
+//{{{
 bool OMXReader::Close()
 {
   if (m_pFormatContext)
@@ -376,7 +396,7 @@ bool OMXReader::Close()
     m_dllAvUtil.av_free(m_ioContext->buffer);
     m_dllAvUtil.av_free(m_ioContext);
   }
-  
+
   m_ioContext       = NULL;
   m_pFormatContext  = NULL;
 
@@ -412,7 +432,9 @@ bool OMXReader::Close()
 
   return true;
 }
+//}}}
 
+//{{{
 /*void OMXReader::FlushRead()
 {
   m_iCurrentPts = DVD_NOPTS_VALUE;
@@ -422,7 +444,8 @@ bool OMXReader::Close()
 
   ff_read_frame_flush(m_pFormatContext);
 }*/
-
+//}}}
+//{{{
 bool OMXReader::SeekTime(int time, bool backwords, double *startpts)
 {
   if(time < 0)
@@ -472,7 +495,8 @@ bool OMXReader::SeekTime(int time, bool backwords, double *startpts)
 
   return (ret >= 0);
 }
-
+//}}}
+//{{{
 AVMediaType OMXReader::PacketType(OMXPacket *pkt)
 {
   if(!m_pFormatContext || !pkt)
@@ -480,7 +504,8 @@ AVMediaType OMXReader::PacketType(OMXPacket *pkt)
 
   return m_pFormatContext->streams[pkt->stream_index]->codec->codec_type;
 }
-
+//}}}
+//{{{
 OMXPacket *OMXReader::Read()
 {
   AVPacket  pkt;
@@ -612,7 +637,7 @@ OMXPacket *OMXReader::Read()
     if(duration > pStream->duration)
     {
       pStream->duration = duration;
-      duration = m_dllAvUtil.av_rescale_rnd(pStream->duration, (int64_t)pStream->time_base.num * AV_TIME_BASE, 
+      duration = m_dllAvUtil.av_rescale_rnd(pStream->duration, (int64_t)pStream->time_base.num * AV_TIME_BASE,
                                             pStream->time_base.den, AV_ROUND_NEAR_INF);
       if ((m_pFormatContext->duration == (int64_t)AV_NOPTS_VALUE)
           ||  (m_pFormatContext->duration != (int64_t)AV_NOPTS_VALUE && duration > m_pFormatContext->duration))
@@ -625,7 +650,8 @@ OMXPacket *OMXReader::Read()
   UnLock();
   return m_omx_pkt;
 }
-
+//}}}
+//{{{
 bool OMXReader::GetStreams()
 {
   if(!m_pFormatContext)
@@ -712,7 +738,8 @@ bool OMXReader::GetStreams()
 
   return true;
 }
-
+//}}}
+//{{{
 void OMXReader::AddStream(int id)
 {
   if(id > MAX_STREAMS || !m_pFormatContext)
@@ -781,7 +808,8 @@ void OMXReader::AddStream(int id)
     memcpy(m_streams[id].extradata, pStream->codec->extradata, pStream->codec->extradata_size);
   }
 }
-
+//}}}
+//{{{
 bool OMXReader::SetActiveStreamInternal(OMXStreamType type, unsigned int index)
 {
   bool ret = false;
@@ -848,7 +876,9 @@ bool OMXReader::SetActiveStreamInternal(OMXStreamType type, unsigned int index)
 
   return ret;
 }
+//}}}
 
+//{{{
 bool OMXReader::IsActive(int stream_index)
 {
   if((m_audio_index != -1)    && m_streams[m_audio_index].id      == stream_index)
@@ -860,7 +890,8 @@ bool OMXReader::IsActive(int stream_index)
 
   return false;
 }
-
+//}}}
+//{{{
 bool OMXReader::IsActive(OMXStreamType type, int stream_index)
 {
   if((m_audio_index != -1)    && m_streams[m_audio_index].id      == stream_index && m_streams[m_audio_index].type == type)
@@ -872,7 +903,9 @@ bool OMXReader::IsActive(OMXStreamType type, int stream_index)
 
   return false;
 }
+//}}}
 
+//{{{
 double OMXReader::SelectAspect(AVStream* st, bool& forced)
 {
   // trust matroshka container
@@ -897,7 +930,9 @@ double OMXReader::SelectAspect(AVStream* st, bool& forced)
 
   return 0.0;
 }
+//}}}
 
+//{{{
 bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
 {
   if(!hints || !stream)
@@ -954,7 +989,8 @@ bool OMXReader::GetHints(AVStream *stream, COMXStreamInfo *hints)
 
   return true;
 }
-
+//}}}
+//{{{
 bool OMXReader::GetHints(OMXStreamType type, unsigned int index, COMXStreamInfo &hints)
 {
   for(unsigned int i = 0; i < MAX_STREAMS; i++)
@@ -968,7 +1004,8 @@ bool OMXReader::GetHints(OMXStreamType type, unsigned int index, COMXStreamInfo 
 
   return false;
 }
-
+//}}}
+//{{{
 bool OMXReader::GetHints(OMXStreamType type, COMXStreamInfo &hints)
 {
   bool ret = false;
@@ -1002,12 +1039,15 @@ bool OMXReader::GetHints(OMXStreamType type, COMXStreamInfo &hints)
 
   return ret;
 }
+//}}}
 
+//{{{
 bool OMXReader::IsEof()
 {
   return m_eof;
 }
-
+//}}}
+//{{{
 void OMXReader::FreePacket(OMXPacket *pkt)
 {
   if(pkt)
@@ -1017,6 +1057,9 @@ void OMXReader::FreePacket(OMXPacket *pkt)
     free(pkt);
   }
 }
+//}}}
+
+//{{{
 
 OMXPacket *OMXReader::AllocPacket(int size)
 {
@@ -1043,7 +1086,9 @@ OMXPacket *OMXReader::AllocPacket(int size)
   }
   return pkt;
 }
+//}}}
 
+//{{{
 bool OMXReader::SetActiveStream(OMXStreamType type, unsigned int index)
 {
   bool ret = false;
@@ -1052,7 +1097,8 @@ bool OMXReader::SetActiveStream(OMXStreamType type, unsigned int index)
   UnLock();
   return ret;
 }
-
+//}}}
+//{{{
 bool OMXReader::SeekChapter(int chapter, double* startpts)
 {
   if(chapter < 1)
@@ -1072,7 +1118,8 @@ bool OMXReader::SeekChapter(int chapter, double* startpts)
   return false;
 #endif
 }
-
+//}}}
+//{{{
 double OMXReader::ConvertTimestamp(int64_t pts, int den, int num)
 {
   if(m_pFormatContext == NULL)
@@ -1096,7 +1143,8 @@ double OMXReader::ConvertTimestamp(int64_t pts, int den, int num)
 
   return timestamp*DVD_TIME_BASE;
 }
-
+//}}}
+//{{{
 int OMXReader::GetChapter()
 {
   if(m_pFormatContext == NULL
@@ -1114,7 +1162,8 @@ int OMXReader::GetChapter()
 #endif
   return 0;
 }
-
+//}}}
+//{{{
 void OMXReader::GetChapterName(std::string& strChapterName)
 {
   strChapterName = "";
@@ -1136,7 +1185,8 @@ void OMXReader::GetChapterName(std::string& strChapterName)
 #endif
 #endif
 }
-
+//}}}
+//{{{
 void OMXReader::UpdateCurrentPTS()
 {
   m_iCurrentPts = DVD_NOPTS_VALUE;
@@ -1151,7 +1201,9 @@ void OMXReader::UpdateCurrentPTS()
     }
   }
 }
+//}}}
 
+//{{{
 void OMXReader::SetSpeed(int iSpeed)
 {
   if(!m_pFormatContext)
@@ -1184,7 +1236,8 @@ void OMXReader::SetSpeed(int iSpeed)
     }
   }
 }
-
+//}}}
+//{{{
 int OMXReader::GetStreamLength()
 {
   if (!m_pFormatContext)
@@ -1192,7 +1245,9 @@ int OMXReader::GetStreamLength()
 
   return (int)(m_pFormatContext->duration / (AV_TIME_BASE / 1000));
 }
+//}}}
 
+//{{{
 double OMXReader::NormalizeFrameduration(double frameduration)
 {
   //if the duration is within 20 microseconds of a common duration, use that
@@ -1217,7 +1272,9 @@ double OMXReader::NormalizeFrameduration(double frameduration)
   else
     return frameduration;
 }
+//}}}
 
+//{{{
 std::string OMXReader::GetStreamCodecName(AVStream *stream)
 {
   std::string strStreamName = "";
@@ -1263,7 +1320,8 @@ std::string OMXReader::GetStreamCodecName(AVStream *stream)
 
   return strStreamName;
 }
-
+//}}}
+//{{{
 std::string OMXReader::GetCodecName(OMXStreamType type)
 {
   std::string strStreamName;
@@ -1290,7 +1348,8 @@ std::string OMXReader::GetCodecName(OMXStreamType type)
 
   return strStreamName;
 }
-
+//}}}
+//{{{
 std::string OMXReader::GetCodecName(OMXStreamType type, unsigned int index)
 {
   std::string strStreamName = "";
@@ -1306,7 +1365,8 @@ std::string OMXReader::GetCodecName(OMXStreamType type, unsigned int index)
 
   return strStreamName;
 }
-
+//}}}
+//{{{
 std::string OMXReader::GetStreamLanguage(OMXStreamType type, unsigned int index)
 {
   std::string language = "";
@@ -1322,7 +1382,8 @@ std::string OMXReader::GetStreamLanguage(OMXStreamType type, unsigned int index)
 
   return language;
 }
-
+//}}}
+//{{{
 std::string OMXReader::GetStreamName(OMXStreamType type, unsigned int index)
 {
   std::string name = "";
@@ -1338,7 +1399,8 @@ std::string OMXReader::GetStreamName(OMXStreamType type, unsigned int index)
 
   return name;
 }
-
+//}}}
+//{{{
 std::string OMXReader::GetStreamType(OMXStreamType type, unsigned int index)
 {
   std::string strInfo;
@@ -1379,7 +1441,9 @@ std::string OMXReader::GetStreamType(OMXStreamType type, unsigned int index)
   strInfo = sInfo;
   return strInfo;
 }
+//}}}
 
+//{{{
 bool OMXReader::CanSeek()
 {
   if(m_ioContext)
@@ -1393,3 +1457,4 @@ bool OMXReader::CanSeek()
 
   return false;
 }
+//}}}

@@ -1,3 +1,4 @@
+//{{{
 // Copyright Digital Mars 2003 - 2009.
 // Authors: Walter Bright, Sean Kelly
 
@@ -24,12 +25,14 @@
 // FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
-
-
+//}}}
+//{{{
 #include <stdexcept>
 #include <cassert>
 #include "Unicode.h"
+//}}}
 
+//{{{
 /***************
  * Decodes and returns character starting at s[idx]. idx is advanced past the
  * decoded character. If the character is not well formed, an exception is
@@ -45,7 +48,7 @@ char32_t decodeUtf8(const char* s, size_t len, size_t& idx)
   char u = s[i];
 
   if (u & 0x80)
-  { 
+  {
     size_t n;
     char u2;
 
@@ -116,3 +119,4 @@ char32_t decodeUtf8(const char* s, size_t len, size_t& idx)
   throw std::runtime_error("invalid UTF-8 sequence");
   return V; // dummy return
 }
+//}}}

@@ -1,3 +1,4 @@
+//{{{
 // Author: Torarin Hals Bakke (2012)
 
 // Boost Software License - Version 1.0 - August 17th, 2003
@@ -23,7 +24,9 @@
 // FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
+//}}}
 
+//{{{
 #include "SubtitleRenderer.h"
 #include "Unicode.h"
 #include "utils/ScopeExit.h"
@@ -36,12 +39,13 @@
 #include <algorithm>
 
 #include "bcm_host.h"
+//}}}
 
 class BoxRenderer {
   VGPath path_;
   VGPaint paint_;
-
 public:
+  //{{{
   BoxRenderer(unsigned int opacity) {
     path_ = vgCreatePath(VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_F,
                         1.0, 0.0,
@@ -55,7 +59,8 @@ public:
     vgSetColor(paint_, opacity);
     assert(!vgGetError());
   }
-
+  //}}}
+  //{{{
   ~BoxRenderer() {
     vgDestroyPath(path_);
     assert(!vgGetError());
@@ -63,14 +68,17 @@ public:
     assert(!vgGetError());
   }
 
+  //}}}
   BoxRenderer(const BoxRenderer&) = delete;
   BoxRenderer& operator=(const BoxRenderer&) = delete;
 
+  //{{{
   void clear() {
     vgClearPath(path_, VG_PATH_CAPABILITY_ALL);
     assert(!vgGetError());
   }
-
+  //}}}
+  //{{{
   void push(int x, int y, int width, int height) {
     assert(width >= 0);
     assert(height >= 0);
@@ -78,7 +86,8 @@ public:
     vguRect(path_, x, y, width, height);
     assert(!vgGetError());
   };
-
+  //}}}
+  //{{{
   void render() {
     vgSetPaint(paint_, VG_FILL_PATH);
     assert(!vgGetError());
@@ -86,7 +95,10 @@ public:
     vgDrawPath(path_, VG_FILL_PATH);
     assert(!vgGetError());
   }
+  //}}}
 };
+
+//{{{
 
 void SubtitleRenderer::load_glyph(InternalChar ch) {
   VGfloat escapement[2]{};
@@ -120,7 +132,7 @@ void SubtitleRenderer::load_glyph(InternalChar ch) {
         image = vgCreateImage(VG_A_8, image_width, image_height,
                               VG_IMAGE_QUALITY_NONANTIALIASED);
         assert(image);
-        
+
         if (bitmap.pitch > 0) {
           vgImageSubData(image,
                          bitmap.buffer + bitmap.pitch*(bitmap.rows-1),
@@ -190,7 +202,8 @@ void SubtitleRenderer::load_glyph(InternalChar ch) {
     load_glyph_internal(ft_face_italic_, vg_font_border_, true);
   }
 }
-
+//}}}
+//{{{
 int SubtitleRenderer::get_text_width(const std::vector<InternalChar>& text) {
   int width = 0;
   for (auto c = text.begin(); c != text.end(); ++c) {
@@ -198,9 +211,10 @@ int SubtitleRenderer::get_text_width(const std::vector<InternalChar>& text) {
   }
   return width;
 }
+//}}}
 
-std::vector<SubtitleRenderer::InternalChar> SubtitleRenderer::
-get_internal_chars(const std::string& str, TagTracker& tag_tracker) {
+//{{{
+std::vector<SubtitleRenderer::InternalChar> SubtitleRenderer:: get_internal_chars(const std::string& str, TagTracker& tag_tracker) {
   std::vector<InternalChar> internal_chars;
   auto c_str = str.c_str();
   for (size_t i = 0, len = str.length(); i < len;) {
@@ -215,17 +229,17 @@ get_internal_chars(const std::string& str, TagTracker& tag_tracker) {
   }
   return internal_chars;
 }
-
-void SubtitleRenderer::
-prepare_glyphs(const std::vector<InternalChar>& text) {
+//}}}
+//{{{
+void SubtitleRenderer::prepare_glyphs(const std::vector<InternalChar>& text) {
   for (auto c = text.begin(); c != text.end(); ++c) {
     if (glyphs_.find(*c) == glyphs_.end())
       load_glyph(*c);
   }
 }
-
-void SubtitleRenderer::
-draw_text(VGFont font,
+//}}}
+//{{{
+void SubtitleRenderer::draw_text(VGFont font,
           const std::vector<SubtitleRenderer::InternalChar>& text,
           int x, int y,
           unsigned int lightness) {
@@ -254,14 +268,15 @@ draw_text(VGFont font,
     assert(!vgGetError());
   }
 }
+//}}}
 
-
+//{{{
 SubtitleRenderer::~SubtitleRenderer() BOOST_NOEXCEPT {
   destroy();
 }
-
-SubtitleRenderer::
-SubtitleRenderer(int display, int layer,
+//}}}
+//{{{
+SubtitleRenderer:: SubtitleRenderer(int display, int layer,
                  const std::string& font_path,
                  const std::string& italic_font_path,
                  float font_size,
@@ -319,15 +334,17 @@ SubtitleRenderer(int display, int layer,
     throw;
   }
 }
+//}}}
 
+//{{{
 void SubtitleRenderer::destroy() {
   destroy_vg();
   destroy_window();
   destroy_fonts();
 }
-
-void SubtitleRenderer::
-initialize_fonts(const std::string& font_path,
+//}}}
+//{{{
+void SubtitleRenderer:: initialize_fonts(const std::string& font_path,
                  const std::string& italic_font_path) {
   ENFORCE(!FT_Init_FreeType(&ft_library_));
   ENFORCE2(!FT_New_Face(ft_library_, font_path.c_str(), 0, &ft_face_),
@@ -368,7 +385,9 @@ initialize_fonts(const std::string& font_path,
                  FT_STROKER_LINEJOIN_ROUND,
                  0);
 }
+//}}}
 
+//{{{
 void SubtitleRenderer::destroy_fonts() {
   if (ft_library_) {
     auto error = FT_Done_FreeType(ft_library_);
@@ -378,8 +397,10 @@ void SubtitleRenderer::destroy_fonts() {
     ft_face_italic_ = {};
     ft_stroker_ = {};
   }
-} 
+}
+//}}}
 
+//{{{
 void SubtitleRenderer::initialize_window(int display, int layer) {
   VC_RECT_T dst_rect;
   dst_rect.x = config_.buffer_x;
@@ -391,7 +412,7 @@ void SubtitleRenderer::initialize_window(int display, int layer) {
   src_rect.x = 0;
   src_rect.y = 0;
   src_rect.width = dst_rect.width << 16;
-  src_rect.height = dst_rect.height << 16;        
+  src_rect.height = dst_rect.height << 16;
 
   dispman_display_ = vc_dispmanx_display_open(display);
   ENFORCE(dispman_display_);
@@ -417,8 +438,9 @@ void SubtitleRenderer::initialize_window(int display, int layer) {
     ENFORCE(dispman_element_);
   }
 }
-
-void SubtitleRenderer::destroy_window() {  
+//}}}
+//{{{
+void SubtitleRenderer::destroy_window() {
   if (dispman_element_) {
     auto dispman_update = vc_dispmanx_update_start(0);
     assert(dispman_update);
@@ -441,7 +463,9 @@ void SubtitleRenderer::destroy_window() {
     dispman_display_ = {};
   }
 }
+//}}}
 
+//{{{
 void SubtitleRenderer::initialize_vg() {
   // get an EGL display connection
   display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -471,7 +495,7 @@ void SubtitleRenderer::initialize_vg() {
   nativewindow.element = dispman_element_;
   nativewindow.width = config_.buffer_width;
   nativewindow.height = config_.buffer_height;
-     
+
   surface_ = eglCreateWindowSurface(display_, config, &nativewindow, NULL);
   ENFORCE(surface_);
 
@@ -499,7 +523,8 @@ void SubtitleRenderer::initialize_vg() {
   // VGfloat color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
   // vgSetfv(VG_CLEAR_COLOR, 4, color);
 }
-
+//}}}
+//{{{
 void SubtitleRenderer::destroy_vg() {
   if (display_) {
     auto result =
@@ -514,9 +539,10 @@ void SubtitleRenderer::destroy_vg() {
     display_ = {};
   }
 }
+//}}}
 
-void SubtitleRenderer::
-prepare(const std::vector<std::string>& text_lines) BOOST_NOEXCEPT {
+//{{{
+void SubtitleRenderer::prepare(const std::vector<std::string>& text_lines) BOOST_NOEXCEPT {
   const int n_lines = text_lines.size();
   TagTracker tag_tracker;
 
@@ -536,12 +562,14 @@ prepare(const std::vector<std::string>& text_lines) BOOST_NOEXCEPT {
 
   prepared_ = true;
 }
-
+//}}}
+//{{{
 void SubtitleRenderer::clear() BOOST_NOEXCEPT {
   vgClear(0, 0, screen_width_, screen_height_);
   assert(!vgGetError());
 }
-
+//}}}
+//{{{
 void SubtitleRenderer::draw() BOOST_NOEXCEPT {
   clear();
 
@@ -577,12 +605,15 @@ void SubtitleRenderer::draw() BOOST_NOEXCEPT {
 
   prepared_ = false;
 }
-
+//}}}
+//{{{
 void SubtitleRenderer::swap_buffers() BOOST_NOEXCEPT {
   EGLBoolean result = eglSwapBuffers(display_, surface_);
   assert(result);
 }
+//}}}
 
+//{{{
 void SubtitleRenderer::set_rect(int x1, int y1, int x2, int y2) BOOST_NOEXCEPT
 {
     uint32_t width = x2-x1;
@@ -619,3 +650,4 @@ void SubtitleRenderer::set_rect(int x1, int y1, int x2, int y2) BOOST_NOEXCEPT
     ENFORCE(!FT_Set_Pixel_Sizes(ft_face_, 0, font_size));
     ENFORCE(!FT_Set_Pixel_Sizes(ft_face_italic_, 0, font_size));
 }
+//}}}

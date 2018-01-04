@@ -1,3 +1,4 @@
+//{{{
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -11,10 +12,12 @@
 
 #include "utils/log.h"
 #include "Keyboard.h"
+//}}}
 
-Keyboard::Keyboard() 
+//{{{
+Keyboard::Keyboard()
 {
-  if (isatty(STDIN_FILENO)) 
+  if (isatty(STDIN_FILENO))
   {
     struct termios new_termios;
 
@@ -26,9 +29,9 @@ Keyboard::Keyboard()
     new_termios.c_cc[VMIN] = 0;
 
     tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
-  } 
-  else 
-  {    
+  }
+  else
+  {
     orig_fl = fcntl(STDIN_FILENO, F_GETFL);
     fcntl(STDIN_FILENO, F_SETFL, orig_fl | O_NONBLOCK);
   }
@@ -36,8 +39,8 @@ Keyboard::Keyboard()
   if (dbus_connect() < 0)
   {
     CLog::Log(LOGWARNING, "Keyboard: DBus connection failed");
-  } 
-  else 
+  }
+  else
   {
     CLog::Log(LOGDEBUG, "Keyboard: DBus connection succeeded");
   }
@@ -46,34 +49,41 @@ Keyboard::Keyboard()
   Create();
   m_action = -1;
 }
-
-Keyboard::~Keyboard() 
+//}}}
+//{{{
+Keyboard::~Keyboard()
 {
   Close();
 }
+//}}}
 
+//{{{
 void Keyboard::Close()
 {
-  if (ThreadHandle()) 
+  if (ThreadHandle())
   {
     StopThread();
   }
   dbus_disconnect();
   restore_term();
 }
+//}}}
 
-void Keyboard::restore_term() 
+//{{{
+void Keyboard::restore_term()
 {
-  if (isatty(STDIN_FILENO)) 
+  if (isatty(STDIN_FILENO))
   {
     tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
-  } 
-  else 
+  }
+  else
   {
     fcntl(STDIN_FILENO, F_SETFL, orig_fl);
   }
 }
+//}}}
 
+//{{{
 void Keyboard::Sleep(unsigned int dwMilliSeconds)
 {
   struct timespec req;
@@ -82,8 +92,9 @@ void Keyboard::Sleep(unsigned int dwMilliSeconds)
 
   while ( nanosleep(&req, &req) == -1 && errno == EINTR && (req.tv_nsec > 0 || req.tv_sec > 0));
 }
-
-void Keyboard::Process() 
+//}}}
+//{{{
+void Keyboard::Process()
 {
   while(!m_bStop)
   {
@@ -105,15 +116,17 @@ void Keyboard::Process()
       Sleep(20);
   }
 }
-
+//}}}
+//{{{
 int Keyboard::getEvent()
 {
   int ret = m_action;
   m_action = -1;
   return ret;
 }
-
-void Keyboard::send_action(int action) 
+//}}}
+//{{{
+void Keyboard::send_action(int action)
 {
   DBusMessage *message = NULL, *reply = NULL;
   DBusError error;
@@ -124,16 +137,16 @@ void Keyboard::send_action(int action)
   dbus_error_init(&error);
 
   if (!(message = dbus_message_new_method_call(m_dbus_name.c_str(),
-                                              OMXPLAYER_DBUS_PATH_SERVER, 
+                                              OMXPLAYER_DBUS_PATH_SERVER,
                                               OMXPLAYER_DBUS_INTERFACE_PLAYER,
-                                              "Action"))) 
+                                              "Action")))
   {
     CLog::Log(LOGWARNING, "Keyboard: DBus error 1");
     goto fail;
   }
 
   dbus_message_append_args(message, DBUS_TYPE_INT32, &action, DBUS_TYPE_INVALID);
-  
+
   reply = dbus_connection_send_with_reply_and_block(conn, message, -1, &error);
 
   if (!reply || dbus_error_is_set(&error))
@@ -145,7 +158,7 @@ void Keyboard::send_action(int action)
   return;
 
 fail:
-  if (dbus_error_is_set(&error)) 
+  if (dbus_error_is_set(&error))
   {
     printf("%s", error.message);
     dbus_error_free(&error);
@@ -157,23 +170,27 @@ fail:
   if (reply)
     dbus_message_unref(reply);
 }
-
-void Keyboard::setKeymap(std::map<int,int> keymap) 
+//}}}
+//{{{
+void Keyboard::setKeymap(std::map<int,int> keymap)
 {
   m_keymap = keymap;
 }
+//}}}
 
+//{{{
 void Keyboard::setDbusName(std::string dbus_name)
 {
   m_dbus_name = dbus_name;
 }
-
-int Keyboard::dbus_connect() 
+//}}}
+//{{{
+int Keyboard::dbus_connect()
 {
   DBusError error;
 
   dbus_error_init(&error);
-  if (!(conn = dbus_bus_get_private(DBUS_BUS_SESSION, &error))) 
+  if (!(conn = dbus_bus_get_private(DBUS_BUS_SESSION, &error)))
   {
     CLog::Log(LOGWARNING, "dbus_bus_get_private(): %s", error.message);
         goto fail;
@@ -187,7 +204,7 @@ fail:
     if (dbus_error_is_set(&error))
         dbus_error_free(&error);
 
-    if (conn) 
+    if (conn)
     {
         dbus_connection_close(conn);
         dbus_connection_unref(conn);
@@ -197,13 +214,15 @@ fail:
     return -1;
 
 }
-
-void Keyboard::dbus_disconnect() 
+//}}}
+//{{{
+void Keyboard::dbus_disconnect()
 {
-    if (conn) 
+    if (conn)
     {
         dbus_connection_close(conn);
         dbus_connection_unref(conn);
         conn = NULL;
     }
 }
+//}}}

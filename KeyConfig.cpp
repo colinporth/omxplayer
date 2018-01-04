@@ -1,13 +1,15 @@
+//{{{
 #include <string>
 #include <map>
 #include <fstream>
 #include <cstdlib>
 
 #include "KeyConfig.h"
-
+//}}}
 using namespace std;
 
-/* Converts the action string from the config file into 
+//{{{
+/* Converts the action string from the config file into
  * the corresponding enum value
  */
 int convertStringToAction(string str_action)
@@ -62,9 +64,12 @@ int convertStringToAction(string str_action)
         return KeyConfig::ACTION_SHOW_SUBTITLES;
     if(str_action == "HIDE_SUBTITLES")
         return KeyConfig::ACTION_HIDE_SUBTITLES;
-            
+
     return -1;
 }
+//}}}
+
+//{{{
 /* Grabs the substring prior to the ':', this is the Action */
 string getActionFromString(string line)
 {
@@ -77,7 +82,8 @@ string getActionFromString(string line)
 
     return action;
 }
-
+//}}}
+//{{{
 /* Grabs the substring after the ':', this is the Key */
 string getKeyFromString(string line)
 {
@@ -85,14 +91,16 @@ string getKeyFromString(string line)
     unsigned int colonIndex = line.find(":");
     if(colonIndex == string::npos)
         return "";
-    
+
     key = line.substr(colonIndex+1);
 
     return key;
 }
+//}}}
 
+//{{{
 /* Returns a keymap consisting of the default
- *  keybinds specified with the -k option 
+ *  keybinds specified with the -k option
  */
 map<int, int> KeyConfig::buildDefaultKeymap()
 {
@@ -131,7 +139,8 @@ map<int, int> KeyConfig::buildDefaultKeymap()
 
     return keymap;
 }
-
+//}}}
+//{{{
 /* Parses the supplied config file and turns it into a map object.
  * NOTE: Does not work with certain filepath shortcuts (e.g. ~ as user's home)
  */
@@ -180,3 +189,4 @@ map<int, int> KeyConfig::parseConfigFile(string filepath)
     }
     return keymap;
 }
+//}}}

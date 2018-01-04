@@ -1,3 +1,4 @@
+//{{{
 /*
 * XBMC Media Center
 * Copyright (c) 2002 Frodo
@@ -17,7 +18,8 @@
 * along with this program; if not, write to the Free Software
 * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
-
+//}}}
+//{{{
 #include "linux/PlatformDefs.h"
 #include <iostream>
 #include <stdio.h>
@@ -27,14 +29,13 @@
 
 using namespace XFILE;
 using namespace std;
+//}}}
 
-//////////////////////////////////////////////////////////////////////
-// Construction/Destruction
-//////////////////////////////////////////////////////////////////////
 #ifndef __GNUC__
 #pragma warning (disable:4244)
 #endif
 
+//{{{
 //*********************************************************************************************
 CFile::CFile()
 {
@@ -43,14 +44,17 @@ CFile::CFile()
   m_iLength = 0;
   m_bPipe = false;
 }
-
+//}}}
+//{{{
 //*********************************************************************************************
 CFile::~CFile()
 {
   if(m_pFile && !m_bPipe)
     fclose(m_pFile);
 }
+//}}}
 
+//{{{
 //*********************************************************************************************
 bool CFile::Open(const CStdString& strFileName, unsigned int flags)
 {
@@ -73,12 +77,15 @@ bool CFile::Open(const CStdString& strFileName, unsigned int flags)
 
   return true;
 }
-
+//}}}
+//{{{
 bool CFile::OpenForWrite(const CStdString& strFileName, bool bOverWrite)
 {
   return false;
 }
+//}}}
 
+//{{{
 bool CFile::Exists(const CStdString& strFileName, bool bUseCache /* = true */)
 {
   FILE *fp;
@@ -95,7 +102,8 @@ bool CFile::Exists(const CStdString& strFileName, bool bUseCache /* = true */)
 
   return true;
 }
-
+//}}}
+//{{{
 unsigned int CFile::Read(void *lpBuf, int64_t uiBufSize)
 {
   unsigned int ret = 0;
@@ -107,7 +115,9 @@ unsigned int CFile::Read(void *lpBuf, int64_t uiBufSize)
 
   return ret;
 }
+//}}}
 
+//{{{
 //*********************************************************************************************
 void CFile::Close()
 {
@@ -115,7 +125,9 @@ void CFile::Close()
     fclose(m_pFile);
   m_pFile = NULL;
 }
+//}}}
 
+//{{{
 //*********************************************************************************************
 int64_t CFile::Seek(int64_t iFilePosition, int iWhence)
 {
@@ -124,13 +136,16 @@ int64_t CFile::Seek(int64_t iFilePosition, int iWhence)
 
   return fseeko64(m_pFile, iFilePosition, iWhence);;
 }
+//}}}
 
+//{{{
 //*********************************************************************************************
 int64_t CFile::GetLength()
 {
   return m_iLength;
 }
-
+//}}}
+//{{{
 //*********************************************************************************************
 int64_t CFile::GetPosition()
 {
@@ -139,7 +154,9 @@ int64_t CFile::GetPosition()
 
   return ftello64(m_pFile);
 }
+//}}}
 
+//{{{
 //*********************************************************************************************
 int CFile::Write(const void* lpBuf, int64_t uiBufSize)
 {
@@ -162,7 +179,9 @@ int CFile::IoControl(EIoControl request, void* param)
 
   return -1;
 }
+//}}}
 
+//{{{
 bool CFile::IsEOF()
 {
   if (!m_pFile)
@@ -173,3 +192,4 @@ bool CFile::IsEOF()
 
   return feof(m_pFile) != 0;
 }
+//}}}

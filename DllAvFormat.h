@@ -1,24 +1,4 @@
 #pragma once
-/*
- *      Copyright (C) 2005-2010 Team XBMC
- *      http://www.xbmc.org
- *
- *  This Program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2, or (at your option)
- *  any later version.
- *
- *  This Program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with XBMC; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- *  http://www.gnu.org/copyleft/gpl.html
- *
- */
 
 #if (defined HAVE_CONFIG_H) && (!defined WIN32)
   #include "config.h"
@@ -91,7 +71,7 @@ public:
   virtual void avio_wb16(AVIOContext *s, unsigned int val)=0;
   virtual AVFormatContext *avformat_alloc_context(void)=0;
   virtual int av_set_options_string(AVFormatContext *ctx, const char *opts,
-				    const char *key_val_sep, const char *pairs_sep)=0;
+            const char *key_val_sep, const char *pairs_sep)=0;
   virtual AVStream *avformat_new_stream(AVFormatContext *s, AVCodec *c)=0;
   virtual AVOutputFormat *av_guess_format(const char *short_name, const char *filename, const char *mime_type)=0;
   virtual int avformat_write_header (AVFormatContext *s, AVDictionary **options)=0;
@@ -101,18 +81,18 @@ public:
   virtual int avformat_network_deinit  (void)=0;
 };
 
-#if (defined USE_EXTERNAL_FFMPEG) || (defined TARGET_DARWIN) 
+#if (defined USE_EXTERNAL_FFMPEG) || (defined TARGET_DARWIN)
 
 // Use direct mapping
 class DllAvFormat : public DllDynamic, DllAvFormatInterface
 {
 public:
   virtual ~DllAvFormat() {}
-  virtual void av_register_all() 
-  { 
+  virtual void av_register_all()
+  {
     return ::av_register_all();
-  } 
-  virtual void av_register_all_dont_call() { *(volatile int* )0x0 = 0; } 
+  }
+  virtual void av_register_all_dont_call() { *(volatile int* )0x0 = 0; }
   virtual AVInputFormat *av_find_input_format(const char *short_name) { return ::av_find_input_format(short_name); }
   virtual int url_feof(AVIOContext *s) { return ::url_feof(s); }
   virtual void avformat_close_input(AVFormatContext **s) { ::avformat_close_input(s); }
@@ -147,7 +127,7 @@ public:
   virtual void avio_wb16(AVIOContext *s, unsigned int val) { ::avio_wb16(s, val); }
   virtual AVFormatContext *avformat_alloc_context() { return ::avformat_alloc_context(); }
   virtual int av_set_options_string(AVFormatContext *ctx, const char *opts,
-				    const char *key_val_sep, const char *pairs_sep) { return ::av_set_options_string(ctx, opts, key_val_sep, pairs_sep); }
+            const char *key_val_sep, const char *pairs_sep) { return ::av_set_options_string(ctx, opts, key_val_sep, pairs_sep); }
   virtual AVStream *avformat_new_stream(AVFormatContext *s, AVCodec *c) { return ::avformat_new_stream(s, c); }
   virtual AVOutputFormat *av_guess_format(const char *short_name, const char *filename, const char *mime_type) { return ::av_guess_format(short_name, filename, mime_type); }
   virtual int avformat_write_header (AVFormatContext *s, AVDictionary **options) { return ::avformat_write_header (s, options); }

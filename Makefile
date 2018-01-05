@@ -34,8 +34,6 @@ INCLUDES+= -I. \
 	   -I$(SDKSTAGE)/opt/vc/include \
 	   -I$(SDKSTAGE)/opt/vc/include/interface/vcos/pthreads
 
-STRIP ?= strip
-
 SRC=        linux/XMemUtils.cpp \
 	    linux/OMXAlsa.cpp \
 	    utils/log.cpp \
@@ -74,23 +72,11 @@ all: omxplayer
 	rm -f $@
 	$(CXX) $(CFLAGS) $(INCLUDES) -c $< -o $@ -Wno-deprecated-declarations
 
-omxplayer.o: help.h keys.h
-
 version:
 	bash gen_version.sh > version.h
 
 omxplayer: version $(OBJS)
 	$(CXX) $(LDFLAGS) -o omxplayer $(OBJS)
-#        $(STRIP) omxplayer
-
-help.h: README.md Makefile
-	awk '/SYNOPSIS/{p=1;print;next} p&&/KEY BINDINGS/{p=0};p' $< \
-	| sed -e '1,3 d' -e 's/^/"/' -e 's/$$/\\n"/' \
-	> $@
-keys.h: README.md Makefile
-	awk '/KEY BINDINGS/{p=1;print;next} p&&/KEY CONFIG/{p=0};p' $< \
-	| sed -e '1,3 d' -e 's/^/"/' -e 's/$$/\\n"/' \
-	> $@
 
 clean:
 	rm -f *.o

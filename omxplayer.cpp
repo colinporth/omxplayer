@@ -85,8 +85,6 @@ long              m_Amplification       = 0;
 bool              m_NativeDeinterlace   = false;
 bool              m_HWDecode            = false;
 bool              m_no_keys             = false;
-string       m_external_subtitles_path;
-bool              m_has_external_subtitles = false;
 string       m_font_path           = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
 string       m_italic_font_path    = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
 string       m_dbus_name           = "org.mpris.MediaPlayer2.omxplayer";
@@ -144,12 +142,7 @@ void printSubtitleInfo() {
   auto count = m_omx_reader.SubtitleStreamCount();
 
   size_t index = 0;
-  if (m_has_external_subtitles) {
-    ++count;
-    if(!m_player_subtitles.GetUseExternalSubtitles())
-      index = m_player_subtitles.GetActiveStream() + 1;
-    }
-  else if (m_has_subtitle)
+  if (m_has_subtitle)
     index = m_player_subtitles.GetActiveStream();
 
   printf ("Subtitle count: %d, state: %s, index: %d, delay: %d\n",
@@ -514,6 +507,8 @@ int main (int argc, char* argv[]) {
   string            m_user_agent          = "";
   string            m_lavfdopts           = "";
   string            m_avdict              = "";
+
+  vector<Subtitle> external_subtitles;
   //}}}
   //{{{  const
   const int font_opt        = 0x100;
@@ -797,12 +792,6 @@ int main (int argc, char* argv[]) {
         break;
       //}}}
       //{{{
-      case subtitles_opt:
-        m_external_subtitles_path = optarg;
-        m_has_external_subtitles = true;
-        break;
-      //}}}
-      //{{{
       case lines_opt:
         m_subtitle_lines = max(atoi(optarg), 1);
         break;
@@ -988,26 +977,6 @@ int main (int argc, char* argv[]) {
     PrintFileNotFound (m_filename);
     return EXIT_FAILURE;
     }
-  if (m_asked_for_font && !Exists(m_font_path)) {
-    PrintFileNotFound (m_font_path);
-    return EXIT_FAILURE;
-    }
-  if (m_asked_for_italic_font && !Exists(m_italic_font_path)) {
-    PrintFileNotFound (m_italic_font_path);
-    return EXIT_FAILURE;
-    }
-  if (m_has_external_subtitles && !Exists(m_external_subtitles_path)) {
-    PrintFileNotFound (m_external_subtitles_path);
-    return EXIT_FAILURE;
-    }
-
-  if (!m_has_external_subtitles && !filename_is_URL) {
-    auto subtitles_path = m_filename.substr(0, m_filename.find_last_of(".")) + ".srt";
-    if (Exists (subtitles_path)) {
-      m_external_subtitles_path = subtitles_path;
-      m_has_external_subtitles = true;
-      }
-    }
   //}}}
   //{{{  log
   if (m_gen_log) {
@@ -1035,7 +1004,7 @@ int main (int argc, char* argv[]) {
 
   m_has_video = m_omx_reader.VideoStreamCount();
   m_has_audio = m_audio_index_use < 0 ? false : m_omx_reader.AudioStreamCount();
-  m_has_subtitle  = m_has_external_subtitles || m_omx_reader.SubtitleStreamCount();
+  m_has_subtitle  = m_omx_reader.SubtitleStreamCount();
   m_loop = m_loop && m_omx_reader.CanSeek();
 
   // 3d modes don't work without switch hdmi mode
@@ -1090,36 +1059,22 @@ int main (int argc, char* argv[]) {
   if (m_has_video && !m_player_video.Open (m_av_clock, m_config_video))
     goto do_exit;
   //{{{  subtitles
-  if (m_has_subtitle) {
-    vector<Subtitle> external_subtitles;
-    if (m_has_external_subtitles && 
-       !ReadSrt(m_external_subtitles_path, external_subtitles)) {
-      puts ("Unable to read the subtitle file.");
-      goto do_exit;
-      }
+  if (!m_player_subtitles.Open (m_omx_reader.SubtitleStreamCount(),
+                                move(external_subtitles),
+                                m_font_path, m_italic_font_path, m_font_size,
+                                m_centered, m_ghost_box, m_subtitle_lines,
+                                m_config_video.display, m_config_video.layer + 1, m_av_clock))
+    goto do_exit;
 
-    if (!m_player_subtitles.Open (m_omx_reader.SubtitleStreamCount(),
-                                  move(external_subtitles),
-                                  m_font_path, m_italic_font_path, m_font_size,
-                                  m_centered, m_ghost_box, m_subtitle_lines,
-                                  m_config_video.display, m_config_video.layer + 1, m_av_clock))
-      goto do_exit;
-
-    if (m_config_video.dst_rect.x2 > 0 && m_config_video.dst_rect.y2 > 0)
-        m_player_subtitles.SetSubtitleRect (m_config_video.dst_rect.x1, m_config_video.dst_rect.y1,
-                                            m_config_video.dst_rect.x2, m_config_video.dst_rect.y2);
-    }
+  if (m_config_video.dst_rect.x2 > 0 && m_config_video.dst_rect.y2 > 0)
+      m_player_subtitles.SetSubtitleRect (m_config_video.dst_rect.x1, m_config_video.dst_rect.y1,
+                                          m_config_video.dst_rect.x2, m_config_video.dst_rect.y2);
 
   if (m_has_subtitle) {
-    if (!m_has_external_subtitles) {
-      if (m_subtitle_index != -1) {
-        m_player_subtitles.SetActiveStream (min (m_subtitle_index, m_omx_reader.SubtitleStreamCount()-1));
-        }
-      m_player_subtitles.SetUseExternalSubtitles(false);
-      }
-
-    if (m_subtitle_index == -1 && !m_has_external_subtitles)
-      m_player_subtitles.SetVisible(false);
+    if (m_subtitle_index != -1) 
+      m_player_subtitles.SetActiveStream (min (m_subtitle_index, m_omx_reader.SubtitleStreamCount()-1));
+    m_player_subtitles.SetUseExternalSubtitles (false);
+    m_player_subtitles.SetVisible (true);
     }
 
   printSubtitleInfo();
@@ -1313,10 +1268,6 @@ int main (int argc, char* argv[]) {
           if(m_has_subtitle) {
             if(!m_player_subtitles.GetUseExternalSubtitles()) {
               if (m_player_subtitles.GetActiveStream() == 0) {
-                if(m_has_external_subtitles) {
-                  DISPLAY_TEXT_SHORT("Subtitle file:\n" + m_external_subtitles_path);
-                  m_player_subtitles.SetUseExternalSubtitles(true);
-                }
               }
               else {
                 auto new_index = m_player_subtitles.GetActiveStream()-1;

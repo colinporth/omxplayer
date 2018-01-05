@@ -78,7 +78,7 @@ using namespace std;
 
 typedef enum { CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB, CONF_FLAGS_FORMAT_FP } FORMAT_3D_T;
 
-const float kFontSize = 0.04f;
+const float kFontSize = 0.03f;
 const string kFontPath = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
 const string kItalicFontPath = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
 
@@ -1025,8 +1025,8 @@ int main (int argc, char* argv[]) {
                                 m_config_video.display, m_config_video.layer + 1, m_av_clock))
     goto do_exit;
 
-  m_player_subtitles.SetSubtitleRect (m_config_video.dst_rect.x1, m_config_video.dst_rect.y1,
-                                      m_config_video.dst_rect.x2, m_config_video.dst_rect.y2);
+  //m_player_subtitles.SetSubtitleRect (m_config_video.dst_rect.x1, m_config_video.dst_rect.y1,
+  //                                    m_config_video.dst_rect.x2, m_config_video.dst_rect.y2);
 
   if (m_has_subtitle) {
     if (m_subtitle_index != -1)

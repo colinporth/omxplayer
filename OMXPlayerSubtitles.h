@@ -140,15 +140,8 @@ private:
   //}}}
 
   void Process();
-  //{{{
-  void RenderLoop(const std::string& font_path,
-                  const std::string& italic_font_path,
-                  float font_size,
-                  bool centered,
-                  bool ghost_box,
-                  unsigned int lines,
-                  OMXClock* clock);
-  //}}}
+  void RenderLoop (const std::string& font_path, const std::string& italic_font_path, float font_size,
+                   bool centered, bool ghost_box, unsigned int lines, OMXClock* clock);
   std::vector<std::string> GetTextLines(OMXPacket *pkt);
   void FlushRenderer();
 
@@ -164,6 +157,7 @@ private:
           Message::SetDelay,
           Message::DisplayText,
           Message::SetRect>                     m_mailbox;
+
   bool                                          m_visible;
   bool                                          m_use_external_subtitles;
   size_t                                        m_active_index;

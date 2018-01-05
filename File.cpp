@@ -56,7 +56,7 @@ CFile::~CFile()
 
 //{{{
 //*********************************************************************************************
-bool CFile::Open(const CStdString& strFileName, unsigned int flags)
+bool CFile::Open (const CStdString& strFileName, unsigned int flags)
 {
   m_flags = flags;
 
@@ -79,14 +79,14 @@ bool CFile::Open(const CStdString& strFileName, unsigned int flags)
 }
 //}}}
 //{{{
-bool CFile::OpenForWrite(const CStdString& strFileName, bool bOverWrite)
+bool CFile::OpenForWrite (const CStdString& strFileName, bool bOverWrite)
 {
   return false;
 }
 //}}}
 
 //{{{
-bool CFile::Exists(const CStdString& strFileName, bool bUseCache /* = true */)
+bool CFile::Exists (const CStdString& strFileName, bool bUseCache /* = true */)
 {
   FILE *fp;
 
@@ -104,7 +104,7 @@ bool CFile::Exists(const CStdString& strFileName, bool bUseCache /* = true */)
 }
 //}}}
 //{{{
-unsigned int CFile::Read(void *lpBuf, int64_t uiBufSize)
+unsigned int CFile::Read (void *lpBuf, int64_t uiBufSize)
 {
   unsigned int ret = 0;
 
@@ -129,7 +129,7 @@ void CFile::Close()
 
 //{{{
 //*********************************************************************************************
-int64_t CFile::Seek(int64_t iFilePosition, int iWhence)
+int64_t CFile::Seek (int64_t iFilePosition, int iWhence)
 {
   if (!m_pFile)
     return -1;
@@ -158,7 +158,7 @@ int64_t CFile::GetPosition()
 
 //{{{
 //*********************************************************************************************
-int CFile::Write(const void* lpBuf, int64_t uiBufSize)
+int CFile::Write (const void* lpBuf, int64_t uiBufSize)
 {
   return -1;
 }

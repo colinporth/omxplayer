@@ -123,12 +123,12 @@ volatile sig_atomic_t g_abort = false;
 
 DllBcmHost m_BcmHost;
 
-Keyboard* m_keyboard           = NULL;
+Keyboard* m_keyboard = NULL;
 OMXReader m_omx_reader;
-OMXClock* m_av_clock           = NULL;
+OMXClock* m_av_clock = NULL;
 OMXAudioConfig m_config_audio;
 OMXVideoConfig m_config_video;
-OMXPacket* m_omx_pkt            = NULL;
+OMXPacket* m_omx_pkt = NULL;
 OMXPlayerVideo m_player_video;
 OMXPlayerAudio m_player_audio;
 OMXPlayerSubtitles  m_player_subtitles;
@@ -136,7 +136,6 @@ OMXPlayerSubtitles  m_player_subtitles;
 long m_Volume = 0;
 long m_Amplification = 0;
 bool m_HWDecode = false;
-
 bool m_NativeDeinterlace = false;
 
 bool m_Pause = false;

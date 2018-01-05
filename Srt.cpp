@@ -34,7 +34,7 @@
 
 namespace {
   //{{{
-  unsigned int timecode_to_milliseconds(unsigned int h, unsigned int m, unsigned int s, unsigned int f) {
+  unsigned int timecode_to_milliseconds (unsigned int h, unsigned int m, unsigned int s, unsigned int f) {
     return h*3600000 + m*60000 + s*1000 + f;
     }
   //}}}
@@ -52,7 +52,7 @@ template <typename T, typename U> T& getline(T&& input, U&& str) {
   }
 //}}}
 //{{{
-bool ReadSrt(const std::string& filename, std::vector<Subtitle>& subtitles) {
+bool ReadSrt (const std::string& filename, std::vector<Subtitle>& subtitles) {
 
   std::ifstream srt(filename);
   if (!srt) return false;

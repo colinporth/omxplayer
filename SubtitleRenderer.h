@@ -11,10 +11,10 @@
 #include <string>
 //}}}
 
+//{{{
 class TagTracker {
 public:
   TagTracker() : italic_(), state_(), closing_() {};
-
   //{{{
   void put(char32_t cp) {
     if (state_ == '>')
@@ -43,13 +43,11 @@ public:
     }
   }
   //}}}
-
   //{{{
   bool italic() {
     return italic_;
   }
   //}}}
-
   //{{{
   bool in_tag() {
     return state_;
@@ -60,9 +58,9 @@ private:
   bool italic_;
   char state_;
   bool closing_;
-};
-
-//{{{
+  };
+//}}}
+//{{{  struct SubtitleConfig
 typedef struct {
   int buffer_width;
   int buffer_height;
@@ -94,34 +92,30 @@ public:
   //}}}
   ~SubtitleRenderer() BOOST_NOEXCEPT;
 
-  void prepare(const std::vector<std::string>& text_lines) BOOST_NOEXCEPT;
-
+  void prepare (const std::vector<std::string>& text_lines) BOOST_NOEXCEPT;
   //{{{
   void unprepare() BOOST_NOEXCEPT {
     prepared_ = false;
   }
   //}}}
-
   //{{{
   void show_next() BOOST_NOEXCEPT {
     if (prepared_) {
       // puts("Expensive show_next!");
       draw();
-    }
+      }
     swap_buffers();
-  }
+    }
   //}}}
-
   //{{{
   void hide() BOOST_NOEXCEPT {
     clear();
     swap_buffers();
     if (prepared_)
       draw();
-  }
+    }
   //}}}
-
-  void set_rect(int width, int height, int x, int y) BOOST_NOEXCEPT;
+  void set_rect (int width, int height, int x, int y) BOOST_NOEXCEPT;
 
 private:
   //{{{
@@ -154,29 +148,26 @@ private:
   };
   //}}}
 
-  //{{{
-  static void draw_text(VGFont font,
-                        const std::vector<InternalChar>& text,
-                        int x, int y,
-                        unsigned int lightness);
-  //}}}
+  static void draw_text (VGFont font, const std::vector<InternalChar>& text,
+                         int x, int y, unsigned int lightness);
 
   void destroy();
-  void initialize_fonts(const std::string& font_name,
-                        const std::string& italic_font_path);
+  void initialize_fonts (const std::string& font_name, const std::string& italic_font_path);
   void destroy_fonts();
   void initialize_vg();
   void destroy_vg();
+
   void initialize_window(int display, int layer);
   void destroy_window();
+
   void clear() BOOST_NOEXCEPT;
   void draw() BOOST_NOEXCEPT;
   void swap_buffers() BOOST_NOEXCEPT;
+
   void prepare_glyphs(const std::vector<InternalChar>& text);
   void load_glyph(InternalChar ch);
   int get_text_width(const std::vector<InternalChar>& text);
-  std::vector<InternalChar> get_internal_chars(const std::string& str,
-                                               TagTracker& tag_tracker);
+  std::vector<InternalChar> get_internal_chars (const std::string& str, TagTracker& tag_tracker);
 
   bool prepared_;
   DISPMANX_ELEMENT_HANDLE_T dispman_element_;

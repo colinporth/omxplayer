@@ -63,13 +63,8 @@ OMXPlayerSubtitles::~OMXPlayerSubtitles() BOOST_NOEXCEPT {
 //{{{
 bool OMXPlayerSubtitles::Open (size_t stream_count,
                                vector<Subtitle>&& external_subtitles,
-                               const string& font_path,
-                               const string& italic_font_path,
-                               float font_size,
-                               bool centered,
-                               bool ghost_box,
-                               unsigned int lines,
-                               int display, int layer,
+                               const string& font_path, const string& italic_font_path, float font_size,
+                               bool centered, bool ghost_box, unsigned int lines, int display, int layer,
                                OMXClock* clock) BOOST_NOEXCEPT {
   assert(!m_open);
 
@@ -92,10 +87,10 @@ bool OMXPlayerSubtitles::Open (size_t stream_count,
   m_display = display;
   m_layer = layer;
 
-  if(!Create())
+  if (!Create())
     return false;
 
-  SendToRenderer(Message::Flush{m_external_subtitles});
+  SendToRenderer (Message::Flush{m_external_subtitles});
 
 #ifndef NDEBUG
   m_open = true;
@@ -234,7 +229,7 @@ void OMXPlayerSubtitles::RenderLoop (const string& font_path,
                    chrono::milliseconds(args.duration);
         prev_now = INT_MAX;
         },
-      [&](Message::SetRect&& args) { renderer.set_rect(args.x1, args.y1, args.x2, args.y2); }
+      [&](Message::SetRect&& args) { renderer.set_rect (args.x1, args.y1, args.x2, args.y2); }
       );
 
     if (exit)
@@ -452,19 +447,17 @@ bool OMXPlayerSubtitles::AddPacket (OMXPacket *pkt, size_t stream_index) BOOST_N
 }
 //}}}
 //{{{
-void OMXPlayerSubtitles::SetSubtitleRect (int x1, int y1, int x2, int y2) BOOST_NOEXCEPT
-{
-  SendToRenderer(Message::SetRect{x1, y1, x2, y2});
-}
+void OMXPlayerSubtitles::SetSubtitleRect (int x1, int y1, int x2, int y2) BOOST_NOEXCEPT {
+  SendToRenderer (Message::SetRect{x1, y1, x2, y2});
+  }
 //}}}
 
 //{{{
-void OMXPlayerSubtitles::DisplayText (const std::string& text, int duration) BOOST_NOEXCEPT
-{
-  assert(m_open);
+void OMXPlayerSubtitles::DisplayText (const std::string& text, int duration) BOOST_NOEXCEPT {
 
+  assert(m_open);
   vector<string> text_lines;
   split (text_lines, text, is_any_of("\n"));
   SendToRenderer (Message::DisplayText{std::move(text_lines), duration});
-}
+  }
 //}}}

@@ -950,8 +950,8 @@ int main (int argc, char* argv[]) {
   blankBackground (true);
 
   m_av_clock = new OMXClock();
-  int control_err = m_omxcontrol.init (m_av_clock, &m_player_audio, &m_player_subtitles,
-                                       &m_omx_reader, m_dbus_name);
+  auto controlError = m_omxcontrol.init (m_av_clock, &m_player_audio, &m_player_subtitles,
+                                         &m_omx_reader, m_dbus_name);
 
   map<int,int> keymap = KeyConfig::buildDefaultKeymap();
   m_keyboard = new Keyboard();
@@ -1083,15 +1083,12 @@ int main (int argc, char* argv[]) {
     if (m_last_check_time == 0.0 || m_last_check_time + DVD_MSEC_TO_TIME(20) <= now) {
       update = true;
       m_last_check_time = now;
-      }
-
-     if (update) {
-       OMXControlResult result = control_err
-                               ? (OMXControlResult)(m_keyboard ? m_keyboard->getEvent() : KeyConfig::ACTION_BLANK)
-                               : m_omxcontrol.getEvent();
-       double oldPos, newPos;
+      OMXControlResult result =
+        controlError ? (OMXControlResult)(m_keyboard ? m_keyboard->getEvent() : KeyConfig::ACTION_BLANK)
+                       : m_omxcontrol.getEvent();
+      double oldPos, newPos;
       //{{{  action key
-      switch(result.getKey()) {
+      switch (result.getKey()) {
         //{{{
         case KeyConfig::ACTION_SHOW_INFO:
           break;
@@ -1468,16 +1465,14 @@ int main (int argc, char* argv[]) {
         }
       //}}}
       }
-
     if (idle) {
       usleep(10000);
       continue;
       }
 
     if (m_seek_flush || m_incr != 0) {
-      double seek_pos     = 0;
-      double pts          = 0;
-
+      double pts = 0;
+      double seek_pos = 0;
       if (m_has_subtitle)
         m_player_subtitles.Pause();
 
@@ -1511,6 +1506,7 @@ int main (int argc, char* argv[]) {
 
       if (m_has_subtitle)
         m_player_subtitles.Resume();
+
       m_packet_after_seek = false;
       m_seek_flush = false;
       m_incr = 0;
@@ -1525,17 +1521,17 @@ int main (int argc, char* argv[]) {
       if(m_omx_reader.SeekTime((int)seek_pos, m_av_clock->OMXPlaySpeed() < 0, &startpts))
         ; //FlushStreams(DVD_NOPTS_VALUE);
 
-      CLog::Log(LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
+      CLog::Log (LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
 
       //unsigned t = (unsigned)(startpts*1e-6);
       unsigned t = (unsigned)(pts*1e-6);
-      printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+      printf ("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
       m_packet_after_seek = false;
       }
 
     /* player got in an error state */
     if(m_player_audio.Error()) {
-      printf("audio player error. emergency exit!!!\n");
+      printf ("audio player error. emergency exit!!!\n");
       goto do_exit;
       }
 

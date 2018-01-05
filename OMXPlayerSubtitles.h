@@ -1,5 +1,5 @@
 #pragma once
-
+//{{{  includes
 #include "OMXThread.h"
 #include "OMXReader.h"
 #include "OMXClock.h"
@@ -13,15 +13,17 @@
 #include <string>
 #include <vector>
 #include <utility>
+//}}}
 
-class OMXPlayerSubtitles : public OMXThread
-{
+class OMXPlayerSubtitles : public OMXThread {
 public:
-  OMXPlayerSubtitles(const OMXPlayerSubtitles&) = delete;
-  OMXPlayerSubtitles& operator=(const OMXPlayerSubtitles&) = delete;
+  OMXPlayerSubtitles (const OMXPlayerSubtitles&) = delete;
+  OMXPlayerSubtitles& operator = (const OMXPlayerSubtitles&) = delete;
   OMXPlayerSubtitles() BOOST_NOEXCEPT;
   ~OMXPlayerSubtitles() BOOST_NOEXCEPT;
-  bool Open(size_t stream_count,
+
+  //{{{
+  bool Open (size_t stream_count,
             std::vector<Subtitle>&& external_subtitles,
             const std::string& font_path,
             const std::string& italic_font_path,
@@ -31,75 +33,90 @@ public:
             unsigned int lines,
             int display, int layer,
             OMXClock* clock) BOOST_NOEXCEPT;
+  //}}}
   void Close() BOOST_NOEXCEPT;
   void Flush() BOOST_NOEXCEPT;
   void Resume() BOOST_NOEXCEPT;
   void Pause() BOOST_NOEXCEPT;
 
   void SetVisible(bool visible) BOOST_NOEXCEPT;
-
+  //{{{
   bool GetVisible() BOOST_NOEXCEPT
   {
     assert(m_open);
     return m_visible;
   }
+  //}}}
 
   void SetActiveStream(size_t index) BOOST_NOEXCEPT;
-
+  //{{{
   size_t GetActiveStream() BOOST_NOEXCEPT
   {
     assert(m_open);
     assert(!m_subtitle_buffers.empty());
     return m_active_index;
   }
+  //}}}
 
   void SetDelay(int value) BOOST_NOEXCEPT;
-
+  //{{{
   int GetDelay() BOOST_NOEXCEPT
   {
     assert(m_open);
     return m_delay;
   }
+  //}}}
 
   void SetUseExternalSubtitles(bool use) BOOST_NOEXCEPT;
-
+  //{{{
   bool GetUseExternalSubtitles() BOOST_NOEXCEPT
   {
     assert(m_open);
     return m_use_external_subtitles;
   }
+  //}}}
 
-  void DisplayText(const std::string& text, int duration) BOOST_NOEXCEPT;
-
-  bool AddPacket(OMXPacket *pkt, size_t stream_index) BOOST_NOEXCEPT;
-
-  void SetSubtitleRect(int x1, int y1, int x2, int y2) BOOST_NOEXCEPT;
+  void DisplayText (const std::string& text, int duration) BOOST_NOEXCEPT;
+  bool AddPacket (OMXPacket *pkt, size_t stream_index) BOOST_NOEXCEPT;
+  void SetSubtitleRect (int x1, int y1, int x2, int y2) BOOST_NOEXCEPT;
 
 private:
+  //{{{
   struct Message {
     struct Stop {};
+    //{{{
     struct Flush
     {
       std::vector<Subtitle> subtitles;
     };
+    //}}}
+    //{{{
     struct Push
     {
       Subtitle subtitle;
     };
+    //}}}
     struct Touch {};
+    //{{{
     struct SetDelay
     {
       int value;
     };
+    //}}}
+    //{{{
     struct SetPaused
     {
       bool value;
     };
+    //}}}
+    //{{{
     struct DisplayText
     {
       std::vector<std::string> text_lines;
       int duration;
     };
+    //}}}
+    //{{{
     struct SetRect
     {
         int x1;
@@ -107,10 +124,11 @@ private:
         int x2;
         int y2;
     };
+    //}}}
   };
-
-  template <typename T>
-  void SendToRenderer(T&& msg)
+  //}}}
+  //{{{
+  template <typename T> void SendToRenderer(T&& msg)
   {
     if(m_thread_stopped.load(std::memory_order_relaxed))
     {
@@ -119,8 +137,10 @@ private:
     }
     m_mailbox.send(std::forward<T>(msg));
   }
+  //}}}
 
   void Process();
+  //{{{
   void RenderLoop(const std::string& font_path,
                   const std::string& italic_font_path,
                   float font_size,
@@ -128,12 +148,14 @@ private:
                   bool ghost_box,
                   unsigned int lines,
                   OMXClock* clock);
+  //}}}
   std::vector<std::string> GetTextLines(OMXPacket *pkt);
   void FlushRenderer();
 
   COMXOverlayCodecText                          m_subtitle_codec;
   std::vector<Subtitle>                         m_external_subtitles;
   std::vector<boost::circular_buffer<Subtitle>> m_subtitle_buffers;
+
   Mailbox<Message::Stop,
           Message::Flush,
           Message::Push,

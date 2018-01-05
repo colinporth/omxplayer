@@ -508,6 +508,8 @@ int main (int argc, char* argv[]) {
   COMXCore              g_OMX;
 
   bool                  m_stats               = false;
+  bool                  m_dump_format         = false;
+  bool                  m_dump_format_exit    = false;
   FORMAT_3D_T           m_3d                  = CONF_FLAGS_FORMAT_NONE;
   bool                  m_refresh             = false;
   double                startpts              = 0;
@@ -645,7 +647,9 @@ int main (int argc, char* argv[]) {
   int c;
   string mode;
 
-  //{{{  opt decoder
+  //Build default keymap just in case the --key-config option isn't used
+  map<int,int> keymap = KeyConfig::buildDefaultKeymap();
+
   while ((c = getopt_long(argc, argv, "wiIhvkn:l:o:cslb::pd3:Myzt:rg", longopts, NULL)) != -1) {
     switch (c) {
       //{{{
@@ -752,6 +756,17 @@ int main (int argc, char* argv[]) {
           }
 
         m_config_audio.device = "omx:" + m_config_audio.device;
+        break;
+      //}}}
+      //{{{
+      case 'i':
+        m_dump_format      = true;
+        m_dump_format_exit = true;
+        break;
+      //}}}
+      //{{{
+      case 'I':
+        m_dump_format = true;
         break;
       //}}}
       //{{{
@@ -949,6 +964,11 @@ int main (int argc, char* argv[]) {
         break;
       //}}}
       //{{{
+      case key_config_opt:
+        keymap = KeyConfig::parseConfigFile(optarg);
+        break;
+      //}}}
+      //{{{
       case layer_opt:
         m_config_video.layer = atoi(optarg);
         break;
@@ -997,9 +1017,9 @@ int main (int argc, char* argv[]) {
         return EXIT_FAILURE;
         break;
       //}}}
-      }
     }
-  //}}}
+  }
+
   m_filename = argv[optind];
   bool filename_is_URL = IsURL (m_filename);
   //{{{  check filename
@@ -1060,12 +1080,14 @@ int main (int argc, char* argv[]) {
   m_av_clock = new OMXClock();
   int control_err = m_omxcontrol.init (m_av_clock, &m_player_audio, &m_player_subtitles, &m_omx_reader, m_dbus_name);
 
-  map<int,int> keymap = KeyConfig::buildDefaultKeymap();
   m_keyboard = new Keyboard();
-  m_keyboard->setKeymap (keymap);
-  m_keyboard->setDbusName (m_dbus_name);
+  m_keyboard->setKeymap(keymap);
+  m_keyboard->setDbusName(m_dbus_name);
 
-  if (!m_omx_reader.Open (m_filename.c_str(), true, m_config_audio.is_live, m_timeout, m_cookie.c_str(), m_user_agent.c_str(), m_lavfdopts.c_str(), m_avdict.c_str()))
+  if (!m_omx_reader.Open (m_filename.c_str(), m_dump_format, m_config_audio.is_live, m_timeout, m_cookie.c_str(), m_user_agent.c_str(), m_lavfdopts.c_str(), m_avdict.c_str()))
+    goto do_exit;
+
+  if (m_dump_format_exit)
     goto do_exit;
 
   m_has_video = m_omx_reader.VideoStreamCount();
@@ -1376,7 +1398,7 @@ int main (int argc, char* argv[]) {
           }
 
           m_player_subtitles.SetVisible(true);
-          printSubtitleInfo();
+          PrintSubtitleInfo();
         }
         break;
       //}}}
@@ -1399,7 +1421,7 @@ int main (int argc, char* argv[]) {
           }
 
           m_player_subtitles.SetVisible(true);
-          printSubtitleInfo();
+          PrintSubtitleInfo();
         }
         break;
       //}}}
@@ -1407,7 +1429,7 @@ int main (int argc, char* argv[]) {
       case KeyConfig::ACTION_TOGGLE_SUBTITLE:
         if(m_has_subtitle) {
           m_player_subtitles.SetVisible(!m_player_subtitles.GetVisible());
-          printSubtitleInfo();
+          PrintSubtitleInfo();
         }
         break;
       //}}}
@@ -1415,7 +1437,7 @@ int main (int argc, char* argv[]) {
       case KeyConfig::ACTION_HIDE_SUBTITLES:
         if(m_has_subtitle) {
           m_player_subtitles.SetVisible(false);
-          printSubtitleInfo();
+          PrintSubtitleInfo();
         }
         break;
       //}}}
@@ -1423,7 +1445,7 @@ int main (int argc, char* argv[]) {
       case KeyConfig::ACTION_SHOW_SUBTITLES:
         if(m_has_subtitle) {
           m_player_subtitles.SetVisible(true);
-          printSubtitleInfo();
+          PrintSubtitleInfo();
         }
         break;
       //}}}
@@ -1433,7 +1455,7 @@ int main (int argc, char* argv[]) {
           auto new_delay = m_player_subtitles.GetDelay() - 250;
           DISPLAY_TEXT_SHORT(strprintf("Subtitle delay: %d ms", new_delay));
           m_player_subtitles.SetDelay(new_delay);
-          printSubtitleInfo();
+          PrintSubtitleInfo();
         }
         break;
       //}}}
@@ -1443,7 +1465,7 @@ int main (int argc, char* argv[]) {
           auto new_delay = m_player_subtitles.GetDelay() + 250;
           DISPLAY_TEXT_SHORT(strprintf("Subtitle delay: %d ms", new_delay));
           m_player_subtitles.SetDelay(new_delay);
-          printSubtitleInfo();
+          PrintSubtitleInfo();
         }
         break;
       //}}}

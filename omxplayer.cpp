@@ -79,8 +79,6 @@ const string kFontPath = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
 const string kItalicFontPath = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
 //}}}
 //{{{  vars
-string m_dbus_name        = "org.mpris.MediaPlayer2.omxplayer";
-
 enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
 long              m_Volume              = 0;
@@ -820,16 +818,12 @@ int main (int argc, char* argv[]) {
     }
   //}}}
   m_filename = argv[optind];
-  bool filename_is_URL = isURL (m_filename);
-  //{{{  check filename
-  auto PrintFileNotFound = [](const string& path) {
-    printf ("File \"%s\" not found.\n", path.c_str());
-    };
-  if (!filename_is_URL && !isPipe(m_filename) && !exists(m_filename)) {
-    PrintFileNotFound (m_filename);
+  if (!isURL (m_filename) && !isPipe (m_filename) && !exists (m_filename)) {
+    //{{{  error, return
+    printf ("File \"%s\" not found.\n", m_filename.c_str());
     return EXIT_FAILURE;
     }
-  //}}}
+    //}}}
   //{{{  log
   if (m_gen_log) {
     CLog::SetLogLevel(LOG_LEVEL_DEBUG);
@@ -844,13 +838,9 @@ int main (int argc, char* argv[]) {
   blankBackground (true);
 
   m_av_clock = new OMXClock();
-  //auto controlError = m_omxcontrol.init (m_av_clock, &m_player_audio, &m_player_subtitles,
-  //                                       &m_omx_reader, m_dbus_name);
-
   map<int,int> keymap = KeyConfig::buildDefaultKeymap();
   m_keyboard = new Keyboard();
   m_keyboard->setKeymap (keymap);
-  m_keyboard->setDbusName (m_dbus_name);
 
   if (!m_omx_reader.Open (m_filename.c_str(), true, m_config_audio.is_live, m_timeout, 
                           m_cookie.c_str(), m_user_agent.c_str(), 
@@ -973,9 +963,6 @@ int main (int argc, char* argv[]) {
         m_last_check_time + DVD_MSEC_TO_TIME(20) <= now) {
       update = true;
       m_last_check_time = now;
-      //OMXControlResult result =
-      //  controlError ? (OMXControlResult)(m_keyboard ? m_keyboard->getEvent() : KeyConfig::ACTION_BLANK)
-      //                 : m_omxcontrol.getEvent();
       OMXControlResult result = (OMXControlResult)m_keyboard->getEvent();
       double oldPos, newPos;
       //{{{  action key

@@ -69,19 +69,20 @@ extern "C" {
 
 using namespace std;
 //}}}
-
+//{{{  macros
 // when we repeatedly seek, rather than play continuously
 #define TRICKPLAY(speed) (speed < 0 || speed > 4 * DVD_PLAYSPEED_NORMAL)
 
 #define DISPLAY_TEXT_SHORT(text) m_player_subtitles.DisplayText(text, 1000)
 #define DISPLAY_TEXT_LONG(text) m_player_subtitles.DisplayText(text, 2000)
-
-typedef enum { CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB, CONF_FLAGS_FORMAT_FP } FORMAT_3D_T;
-
-const float kFontSize = 0.03f;
+//}}}
+//{{{  const
+const float kFontSize = 0.035f;
 const string kFontPath = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
 const string kItalicFontPath = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
 
+typedef enum { CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB, CONF_FLAGS_FORMAT_FP } FORMAT_3D_T;
+//}}}
 //{{{  vars
 string m_dbus_name        = "org.mpris.MediaPlayer2.omxplayer";
 
@@ -150,21 +151,45 @@ void printSubtitleInfo() {
   }
 //}}}
 
-void FlushStreams(double pts);
+void FlushStreams (double pts);
+//{{{
+void FlushStreams (double pts) {
+
+  m_av_clock->OMXStop();
+  m_av_clock->OMXPause();
+
+  if (m_has_video)
+    m_player_video.Flush();
+
+  if (m_has_audio)
+    m_player_audio.Flush();
+
+  if (pts != DVD_NOPTS_VALUE)
+    m_av_clock->OMXMediaTime(pts);
+
+  if (m_has_subtitle)
+    m_player_subtitles.Flush();
+
+  if(m_omx_pkt) {
+    m_omx_reader.FreePacket(m_omx_pkt);
+    m_omx_pkt = NULL;
+    }
+  }
+//}}}
 //{{{
 void SetSpeed (int iSpeed) {
 
-  if(!m_av_clock)
+  if (!m_av_clock)
     return;
 
-  m_omx_reader.SetSpeed(iSpeed);
+  m_omx_reader.SetSpeed (iSpeed);
 
   // flush when in trickplay mode
   if (TRICKPLAY(iSpeed) || TRICKPLAY(m_av_clock->OMXPlaySpeed()))
-    FlushStreams(DVD_NOPTS_VALUE);
+    FlushStreams (DVD_NOPTS_VALUE);
 
-  m_av_clock->OMXSetSpeed(iSpeed);
-  m_av_clock->OMXSetSpeed(iSpeed, true, true);
+  m_av_clock->OMXSetSpeed (iSpeed);
+  m_av_clock->OMXSetSpeed (iSpeed, true, true);
   }
 //}}}
 //{{{
@@ -198,40 +223,17 @@ float get_display_aspect_ratio (SDTV_ASPECT_T aspect)
 }
 //}}}
 //{{{
-void FlushStreams (double pts)
-{
-  m_av_clock->OMXStop();
-  m_av_clock->OMXPause();
+void CallbackTvServiceCallback (void *userdata, uint32_t reason, uint32_t param1, uint32_t param2) {
 
-  if(m_has_video)
-    m_player_video.Flush();
+  sem_t* tv_synced = (sem_t*)userdata;
 
-  if(m_has_audio)
-    m_player_audio.Flush();
-
-  if(pts != DVD_NOPTS_VALUE)
-    m_av_clock->OMXMediaTime(pts);
-
-  if(m_has_subtitle)
-    m_player_subtitles.Flush();
-
-  if(m_omx_pkt)
-  {
-    m_omx_reader.FreePacket(m_omx_pkt);
-    m_omx_pkt = NULL;
-  }
-}
-//}}}
-//{{{
-void CallbackTvServiceCallback (void *userdata, uint32_t reason, uint32_t param1, uint32_t param2)
-{
-  sem_t *tv_synced = (sem_t *)userdata;
   switch(reason) {
-
     case VC_HDMI_UNPLUGGED:
       break;
+
     case VC_HDMI_STANDBY:
       break;
+
     case VC_SDTV_NTSC:
     case VC_SDTV_PAL:
     case VC_HDMI_HDMI:
@@ -239,9 +241,11 @@ void CallbackTvServiceCallback (void *userdata, uint32_t reason, uint32_t param1
       // Signal we are ready now
       sem_post(tv_synced);
       break;
+
     default:
       break;
     }
+
   }
 //}}}
 //{{{
@@ -252,13 +256,14 @@ void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T
 
   HDMI_RES_GROUP_T prefer_group;
   HDMI_RES_GROUP_T group = HDMI_RES_GROUP_CEA;
+
   float fps = 60.0f; // better to force to higher rate if no information is known
   uint32_t prefer_mode;
 
   if (fpsrate && fpsscale)
     fps = DVD_TIME_BASE / OMXReader::NormalizeFrameduration((double)DVD_TIME_BASE * fpsscale / fpsrate);
 
-  //Supported HDMI CEA/DMT resolutions, preferred resolution will be returned
+  // Supported HDMI CEA/DMT resolutions, preferred resolution will be returned
   TV_SUPPORTED_MODE_NEW_T *supported_modes = NULL;
 
   // query the number of modes first
@@ -386,15 +391,15 @@ void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T
 //}}}
 
 //{{{
-bool Exists (const string& path) {
+bool exists (const string& path) {
 
   struct stat buf;
-  auto error = stat(path.c_str(), &buf);
+  auto error = stat (path.c_str(), &buf);
   return !error || errno != ENOENT;
   }
 //}}}
 //{{{
-bool IsURL (const string& str) {
+bool isURL (const string& str) {
 
   auto result = str.find("://");
   if (result == string::npos || result == 0)
@@ -408,7 +413,7 @@ bool IsURL (const string& str) {
   }
 //}}}
 //{{{
-bool IsPipe (const string& str) {
+bool isPipe (const string& str) {
 
   if (str.compare(0, 5, "pipe:") == 0)
     return true;
@@ -476,36 +481,36 @@ int main (int argc, char* argv[]) {
   printf ("omxplayer - Commandline multimedia player for the Raspberry Pi %s\n", VERSION_DATE);
 
   //{{{  vars
-  bool                  m_send_eos            = false;
-  bool                  m_packet_after_seek   = false;
-  bool                  m_seek_flush          = false;
-  bool                  m_chapter_seek        = false;
-  string           m_filename;
+  bool m_send_eos            = false;
+  bool m_packet_after_seek   = false;
+  bool m_seek_flush          = false;
+  bool m_chapter_seek        = false;
+  string m_filename;
 
-  double                m_incr                = 0;
-  double                m_loop_from           = 0;
+  double m_incr                = 0;
+  double m_loop_from           = 0;
 
-  CRBP                  g_RBP;
-  COMXCore              g_OMX;
+  CRBP      g_RBP;
+  COMXCore  g_OMX;
 
-  FORMAT_3D_T           m_3d                  = CONF_FLAGS_FORMAT_NONE;
-  bool                  m_refresh             = false;
-  double                startpts              = 0;
+  FORMAT_3D_T  m_3d                  = CONF_FLAGS_FORMAT_NONE;
+  bool         m_refresh             = false;
+  double       startpts              = 0;
 
   bool sentStarted = false;
-  float m_threshold      = -1.0f; // amount of audio/video required to come out of buffering
-  float m_timeout        = 10.0f; // amount of time file/network operation can stall for before timing out
-  int m_orientation      = -1; // unset
-  float m_fps            = 0.0f; // unset
+  float m_threshold = -1.0f; // amount of audio/video required to come out of buffering
+  float m_timeout   = 10.0f; // amount of time file/network operation can stall for before timing out
+  int m_orientation = -1; // unset
+  float m_fps       = 0.0f; // unset
 
   TV_DISPLAY_STATE_T   tv_state;
   double last_seek_pos = 0;
   bool idle = false;
 
-  string            m_cookie              = "";
-  string            m_user_agent          = "";
-  string            m_lavfdopts           = "";
-  string            m_avdict              = "";
+  string m_cookie     = "";
+  string m_user_agent = "";
+  string m_lavfdopts  = "";
+  string m_avdict     = "";
 
   vector<Subtitle> external_subtitles;
   //}}}
@@ -551,6 +556,16 @@ int main (int argc, char* argv[]) {
   const int lavfdopts_opt   = 0x400;
   const int avdict_opt      = 0x401;
   //}}}
+
+  #define S(x) (int)(DVD_PLAYSPEED_NORMAL*(x))
+
+  double m_last_check_time = 0.0;
+  float m_latency = 0.0f;
+
+  int c;
+  string mode;
+
+  //{{{  opt decoder
   //{{{
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -617,17 +632,6 @@ int main (int argc, char* argv[]) {
   };
   //}}}
 
-  #define S(x) (int)(DVD_PLAYSPEED_NORMAL*(x))
-
-  int playspeeds[] = {S(0), S(1/16.0), S(1/8.0), S(1/4.0), S(1/2.0), S(0.975), S(1.0), S(1.125), S(-32.0), S(-16.0), S(-8.0), S(-4), S(-2), S(-1), S(1), S(2.0), S(4.0), S(8.0), S(16.0), S(32.0)};
-  const int playspeed_slow_min = 0, playspeed_slow_max = 7, playspeed_rew_max = 8, playspeed_rew_min = 13, playspeed_normal = 14, playspeed_ff_min = 15, playspeed_ff_max = 19;
-  int playspeed_current = playspeed_normal;
-  double m_last_check_time = 0.0;
-  float m_latency = 0.0f;
-  int c;
-  string mode;
-
-  //{{{  opt decoder
   while ((c = getopt_long(argc, argv, "wiIhvkn:l:o:cslb::pd3:Myzt:rg", longopts, NULL)) != -1) {
     switch (c) {
       //{{{
@@ -926,12 +930,12 @@ int main (int argc, char* argv[]) {
     }
   //}}}
   m_filename = argv[optind];
-  bool filename_is_URL = IsURL (m_filename);
+  bool filename_is_URL = isURL (m_filename);
   //{{{  check filename
   auto PrintFileNotFound = [](const string& path) {
     printf ("File \"%s\" not found.\n", path.c_str());
     };
-  if (!filename_is_URL && !IsPipe(m_filename) && !Exists(m_filename)) {
+  if (!filename_is_URL && !isPipe(m_filename) && !exists(m_filename)) {
     PrintFileNotFound (m_filename);
     return EXIT_FAILURE;
     }
@@ -1080,7 +1084,8 @@ int main (int argc, char* argv[]) {
 
     double now = m_av_clock->GetAbsoluteClock();
     bool update = false;
-    if (m_last_check_time == 0.0 || m_last_check_time + DVD_MSEC_TO_TIME(20) <= now) {
+    if (m_last_check_time == 0.0 ||
+        m_last_check_time + DVD_MSEC_TO_TIME(20) <= now) {
       update = true;
       m_last_check_time = now;
       OMXControlResult result =
@@ -1096,60 +1101,20 @@ int main (int argc, char* argv[]) {
 
         //{{{
         case KeyConfig::ACTION_DECREASE_SPEED:
-          if (playspeed_current < playspeed_slow_min || playspeed_current > playspeed_slow_max)
-            playspeed_current = playspeed_slow_max-1;
-          playspeed_current = max(playspeed_current-1, playspeed_slow_min);
-          SetSpeed(playspeeds[playspeed_current]);
-          DISPLAY_TEXT_SHORT(strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
-          printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
-          m_Pause = false;
           break;
         //}}}
         //{{{
         case KeyConfig::ACTION_INCREASE_SPEED:
-          if (playspeed_current < playspeed_slow_min || playspeed_current > playspeed_slow_max)
-            playspeed_current = playspeed_slow_max-1;
-          playspeed_current = min(playspeed_current+1, playspeed_slow_max);
-          SetSpeed(playspeeds[playspeed_current]);
-          DISPLAY_TEXT_SHORT(strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
-          printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
-          m_Pause = false;
           break;
         //}}}
 
         //{{{
         case KeyConfig::ACTION_REWIND:
-          if (playspeed_current >= playspeed_ff_min && playspeed_current <= playspeed_ff_max)
-          {
-            playspeed_current = playspeed_normal;
-            m_seek_flush = true;
-          }
-          else if (playspeed_current < playspeed_rew_max || playspeed_current > playspeed_rew_min)
-            playspeed_current = playspeed_rew_min;
-          else
-            playspeed_current = max(playspeed_current-1, playspeed_rew_max);
-          SetSpeed(playspeeds[playspeed_current]);
-          DISPLAY_TEXT_SHORT(strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
-          printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
-          m_Pause = false;
           break;
         //}}}
 
         //{{{
         case KeyConfig::ACTION_FAST_FORWARD:
-          if (playspeed_current >= playspeed_rew_max && playspeed_current <= playspeed_rew_min)
-          {
-            playspeed_current = playspeed_normal;
-            m_seek_flush = true;
-          }
-          else if (playspeed_current < playspeed_ff_min || playspeed_current > playspeed_ff_max)
-            playspeed_current = playspeed_ff_min;
-          else
-            playspeed_current = min(playspeed_current+1, playspeed_ff_max);
-          SetSpeed(playspeeds[playspeed_current]);
-          DISPLAY_TEXT_SHORT(strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
-          printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
-          m_Pause = false;
           break;
         //}}}
         //{{{
@@ -1370,10 +1335,10 @@ int main (int argc, char* argv[]) {
         //{{{
         case KeyConfig::ACTION_PLAYPAUSE:
           m_Pause = !m_Pause;
-          if (m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_NORMAL && m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_PAUSE) {
+          if (m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_NORMAL && 
+              m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_PAUSE) {
             printf("resume\n");
-            playspeed_current = playspeed_normal;
-            SetSpeed(playspeeds[playspeed_current]);
+            SetSpeed(1.0f);
             m_seek_flush = true;
           }
           if(m_Pause) {
@@ -1587,7 +1552,7 @@ int main (int argc, char* argv[]) {
         if (!m_Pause && latency != DVD_NOPTS_VALUE) {
           if (m_av_clock->OMXIsPaused()) {
             if (latency > m_threshold) {
-              CLog::Log(LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
+              CLog::Log (LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
               m_av_clock->OMXResume();
               m_latency = latency;
               }
@@ -1606,13 +1571,13 @@ int main (int argc, char* argv[]) {
 
             m_av_clock->OMXSetSpeed(S(speed));
             m_av_clock->OMXSetSpeed(S(speed), true, true);
-            CLog::Log(LOGDEBUG, "Live: %.2f (%.2f) S:%.3f T:%.2f\n", m_latency, latency, speed, m_threshold);
+            CLog::Log (LOGDEBUG, "Live: %.2f (%.2f) S:%.3f T:%.2f\n", m_latency, latency, speed, m_threshold);
             }
           }
         }
       else if(!m_Pause && (m_omx_reader.IsEof() || m_omx_pkt || TRICKPLAY(m_av_clock->OMXPlaySpeed()) || (audio_fifo_high && video_fifo_high))) {
         if (m_av_clock->OMXIsPaused()) {
-          CLog::Log(LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
+          CLog::Log (LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
           m_av_clock->OMXResume();
           }
         }
@@ -1620,15 +1585,15 @@ int main (int argc, char* argv[]) {
         if (!m_av_clock->OMXIsPaused()) {
           if (!m_Pause)
             m_threshold = min(2.0f*m_threshold, 16.0f);
-          CLog::Log(LOGDEBUG, "Pause %.2f,%.2f (%d,%d,%d,%d) %.2f\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_threshold);
+          CLog::Log (LOGDEBUG, "Pause %.2f,%.2f (%d,%d,%d,%d) %.2f\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_threshold);
           m_av_clock->OMXPause();
           }
         }
       }
 
     if (!sentStarted) {
-      CLog::Log(LOGDEBUG, "COMXPlayer::HandleMessages - player started RESET");
-      m_av_clock->OMXReset(m_has_video, m_has_audio);
+      CLog::Log (LOGDEBUG, "COMXPlayer::HandleMessages - player started RESET");
+      m_av_clock->OMXReset (m_has_video, m_has_audio);
       sentStarted = true;
       }
 
@@ -1665,9 +1630,8 @@ int main (int argc, char* argv[]) {
       }
 
     if (m_has_video && m_omx_pkt && m_omx_reader.IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index)) {
-      if (TRICKPLAY(m_av_clock->OMXPlaySpeed())) {
+      if (TRICKPLAY(m_av_clock->OMXPlaySpeed()))
          m_packet_after_seek = true;
-        }
       if (m_player_video.AddPacket(m_omx_pkt))
         m_omx_pkt = NULL;
       else
@@ -1700,7 +1664,6 @@ int main (int argc, char* argv[]) {
     //}}}
 
 do_exit:
-  printf ("\n");
   unsigned t = (unsigned)(m_av_clock->OMXMediaTime()*1e-6);
   printf ("Stopped at: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
 
@@ -1724,14 +1687,11 @@ do_exit:
     m_omx_reader.FreePacket(m_omx_pkt);
     m_omx_pkt = NULL;
     }
-
   m_omx_reader.Close();
 
   m_av_clock->OMXDeinitialize();
   if (m_av_clock)
     delete m_av_clock;
-
-  vc_tv_show_info(0);
 
   g_OMX.Deinitialize();
   g_RBP.Deinitialize();

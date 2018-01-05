@@ -42,45 +42,49 @@
 using namespace std;
 //}}}
 
-class BoxRenderer {
+class cBoxRenderer {
 public:
   //{{{
-  BoxRenderer(unsigned int opacity) {
+  cBoxRenderer (unsigned int opacity) {
+
     path_ = vgCreatePath (VG_PATH_FORMAT_STANDARD, VG_PATH_DATATYPE_F,
                           1.0, 0.0, 0, 0, VG_PATH_CAPABILITY_ALL);
-    assert(path_);
+    assert (path_);
 
     paint_ = vgCreatePaint();
-    assert(paint_);
+    assert (paint_);
 
     vgSetColor (paint_, opacity);
-    assert(!vgGetError());
+    assert (!vgGetError());
     }
   //}}}
   //{{{
-  ~BoxRenderer() {
-    vgDestroyPath(path_);
-    assert(!vgGetError());
-    vgDestroyPaint(paint_);
-    assert(!vgGetError());
+  ~cBoxRenderer() {
+
+    vgDestroyPath (path_);
+    assert (!vgGetError());
+
+    vgDestroyPaint (paint_);
+    assert (!vgGetError());
     }
   //}}}
-  BoxRenderer (const BoxRenderer&) = delete;
-  BoxRenderer& operator = (const BoxRenderer&) = delete;
+  cBoxRenderer (const cBoxRenderer&) = delete;
+  cBoxRenderer& operator = (const cBoxRenderer&) = delete;
 
   //{{{
   void clear() {
-    vgClearPath(path_, VG_PATH_CAPABILITY_ALL);
-    assert(!vgGetError());
+    vgClearPath (path_, VG_PATH_CAPABILITY_ALL);
+    assert (!vgGetError());
     }
   //}}}
   //{{{
-  void push(int x, int y, int width, int height) {
-    assert(width >= 0);
-    assert(height >= 0);
+  void push (int x, int y, int width, int height) {
 
-    vguRect(path_, x, y, width, height);
-    assert(!vgGetError());
+    assert (width >= 0);
+    assert (height >= 0);
+
+    vguRect (path_, x, y, width, height);
+    assert (!vgGetError());
     };
   //}}}
   //{{{
@@ -100,7 +104,7 @@ private:
   };
 
 //{{{
-void SubtitleRenderer::load_glyph(InternalChar ch) {
+void SubtitleRenderer::load_glyph (InternalChar ch) {
 
   VGfloat escapement[2]{};
   //{{{
@@ -135,7 +139,7 @@ void SubtitleRenderer::load_glyph(InternalChar ch) {
           vgImageSubData(image, bitmap.buffer + bitmap.pitch*(bitmap.rows-1), -bitmap.pitch,
                          VG_A_8, padding, padding, bitmap.width, bitmap.rows);
           assert(!vgGetError());
-          } 
+          }
         else {
           vgImageSubData(image, bitmap.buffer, bitmap.pitch,
                          VG_A_8, padding, padding, bitmap.width, bitmap.rows);
@@ -168,7 +172,7 @@ void SubtitleRenderer::load_glyph(InternalChar ch) {
         vgDestroyImage(image);
         assert(!vgGetError());
         }
-      } 
+      }
     catch(...) {
       escapement[0] = 0;
       escapement[1] = 0;
@@ -205,7 +209,7 @@ int SubtitleRenderer::get_text_width (const vector<InternalChar>& text) {
 //}}}
 
 //{{{
-vector<SubtitleRenderer::InternalChar> SubtitleRenderer::get_internal_chars(const string& str, TagTracker& tag_tracker) {
+vector<SubtitleRenderer::InternalChar> SubtitleRenderer::get_internal_chars (const string& str, TagTracker& tag_tracker) {
 
   vector<InternalChar> internal_chars;
   auto c_str = str.c_str();
@@ -215,7 +219,7 @@ vector<SubtitleRenderer::InternalChar> SubtitleRenderer::get_internal_chars(cons
       tag_tracker.put(cp);
       if (!tag_tracker.in_tag())
         internal_chars.push_back(InternalChar(cp, tag_tracker.italic()));
-      } 
+      }
     catch (...) {
       ++i; // Keep going
       }
@@ -317,27 +321,30 @@ void SubtitleRenderer::destroy() {
   destroy_fonts();
   }
 //}}}
+
 //{{{
-void SubtitleRenderer:: initialize_fonts(const string& font_path,
+void SubtitleRenderer:: initialize_fonts (const string& font_path,
                  const string& italic_font_path) {
 
-  ENFORCE(!FT_Init_FreeType(&ft_library_));
-  ENFORCE2(!FT_New_Face(ft_library_, font_path.c_str(), 0, &ft_face_),
+  ENFORCE (!FT_Init_FreeType(&ft_library_));
+  ENFORCE2 (!FT_New_Face(ft_library_, font_path.c_str(), 0, &ft_face_),
            "Unable to open font");
-  ENFORCE2(!FT_New_Face(ft_library_, italic_font_path.c_str(), 0, &ft_face_italic_),
+  ENFORCE2 (!FT_New_Face(ft_library_, italic_font_path.c_str(), 0, &ft_face_italic_),
            "Unable to open italic font");
   uint32_t font_size = font_size_*screen_height_;
-  ENFORCE(!FT_Set_Pixel_Sizes(ft_face_, 0, font_size));
-  ENFORCE(!FT_Set_Pixel_Sizes(ft_face_italic_, 0, font_size));
+  ENFORCE (!FT_Set_Pixel_Sizes(ft_face_, 0, font_size));
+  ENFORCE (!FT_Set_Pixel_Sizes(ft_face_italic_, 0, font_size));
 
   auto get_bbox = [this](char32_t cp) {
     auto glyph_index = FT_Get_Char_Index(ft_face_, cp);
-    ENFORCE(!FT_Load_Glyph(ft_face_, glyph_index, FT_LOAD_NO_HINTING));
+    ENFORCE (!FT_Load_Glyph(ft_face_, glyph_index, FT_LOAD_NO_HINTING));
+
     FT_Glyph glyph;
-    ENFORCE(!FT_Get_Glyph(ft_face_->glyph, &glyph));
+    ENFORCE (!FT_Get_Glyph(ft_face_->glyph, &glyph));
     SCOPE_EXIT {FT_Done_Glyph(glyph);};
+
     FT_BBox bbox;
-    FT_Glyph_Get_CBox(glyph, FT_GLYPH_BBOX_PIXELS, &bbox);
+    FT_Glyph_Get_CBox (glyph, FT_GLYPH_BBOX_PIXELS, &bbox);
     return bbox;
     };
 
@@ -345,23 +352,19 @@ void SubtitleRenderer:: initialize_fonts(const string& font_path,
   int y_min = get_bbox('g').yMin;
   int y_max = get_bbox('M').yMax;
   y_max += -y_min*0.7f;
+
   config_.line_height = y_max - y_min;
   const int v_padding = config_.line_height*padding_factor + 0.5f;
   config_.line_height += v_padding*2;
   config_.box_offset = y_min-v_padding;
   config_.box_h_padding = config_.line_height/5.0f + 0.5f;
 
-
   constexpr float border_thickness = 0.044f;
-  ENFORCE(!FT_Stroker_New(ft_library_, &ft_stroker_));
-  FT_Stroker_Set(ft_stroker_,
-                 config_.line_height*border_thickness*64.0f,
-                 FT_STROKER_LINECAP_ROUND,
-                 FT_STROKER_LINEJOIN_ROUND,
-                 0);
+  ENFORCE (!FT_Stroker_New(ft_library_, &ft_stroker_));
+  FT_Stroker_Set (ft_stroker_, config_.line_height*border_thickness*64.0f,
+                 FT_STROKER_LINECAP_ROUND, FT_STROKER_LINEJOIN_ROUND, 0);
   }
 //}}}
-
 //{{{
 void SubtitleRenderer::destroy_fonts() {
 
@@ -377,7 +380,7 @@ void SubtitleRenderer::destroy_fonts() {
 //}}}
 
 //{{{
-void SubtitleRenderer::initialize_window(int display, int layer) {
+void SubtitleRenderer::initialize_window (int display, int layer) {
 
   VC_RECT_T dst_rect;
   dst_rect.x = config_.buffer_x;
@@ -515,7 +518,7 @@ void SubtitleRenderer::destroy_vg() {
 //}}}
 
 //{{{
-void SubtitleRenderer::prepare(const vector<string>& text_lines) BOOST_NOEXCEPT {
+void SubtitleRenderer::prepare (const vector<string>& text_lines) BOOST_NOEXCEPT {
 
   const int n_lines = text_lines.size();
   TagTracker tag_tracker;
@@ -553,12 +556,12 @@ void SubtitleRenderer::draw() BOOST_NOEXCEPT {
 
   {
     // font graybox
-    BoxRenderer box_renderer (box_opacity_);
+    cBoxRenderer box_renderer (box_opacity_);
     for (size_t i = 0; i < n_lines; ++i)
-      box_renderer.push(line_positions_[i].first - config_.box_h_padding,
-                        line_positions_[i].second + config_.box_offset,
-                        line_widths_[i] + config_.box_h_padding*2,
-                        config_.line_height);
+      box_renderer.push (line_positions_[i].first - config_.box_h_padding,
+                         line_positions_[i].second + config_.box_offset,
+                         line_widths_[i] + config_.box_h_padding*2,
+                         config_.line_height);
     box_renderer.render();
   }
 

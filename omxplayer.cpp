@@ -152,23 +152,23 @@ bool m_loop = false;
 //}}}
 
 //{{{
-void sigHandler (int s)
-{
-  if (s==SIGINT && !g_abort)
-  {
-     signal(SIGINT, SIG_DFL);
-     g_abort = true;
-     return;
-  }
-  signal(SIGABRT, SIG_DFL);
-  signal(SIGSEGV, SIG_DFL);
-  signal(SIGFPE, SIG_DFL);
-  if (NULL != m_keyboard)
-  {
-     m_keyboard->Close();
-  }
+void sigHandler (int s) {
+
+  if (s == SIGINT && !g_abort) {
+    signal (SIGINT, SIG_DFL);
+    g_abort = true;
+    return;
+    }
+
+  signal (SIGABRT, SIG_DFL);
+  signal (SIGSEGV, SIG_DFL);
+  signal (SIGFPE, SIG_DFL);
+
+  if (m_keyboard)
+    m_keyboard->Close();
+
   abort();
-}
+  }
 //}}}
 //{{{
 void printSubtitleInfo() {
@@ -207,7 +207,7 @@ void callbackTvServiceCallback (void *userdata, uint32_t reason, uint32_t param1
 
   sem_t* tv_synced = (sem_t*)userdata;
 
-  switch(reason) {
+  switch (reason) {
     case VC_SDTV_NTSC:
     case VC_SDTV_PAL:
     case VC_HDMI_HDMI:
@@ -842,7 +842,7 @@ int main (int argc, char* argv[]) {
     goto exit;
 
   mHasVideo = m_omx_reader.VideoStreamCount();
-  mHasAudio = m_audio_index_use < 0 ? false : m_omx_reader.AudioStreamCount();
+  mHasAudio = (m_audio_index_use < 0) ? false : m_omx_reader.AudioStreamCount();
   mHasSubtitle  = m_omx_reader.SubtitleStreamCount();
   m_loop = m_loop && m_omx_reader.CanSeek();
 
@@ -864,9 +864,10 @@ int main (int argc, char* argv[]) {
   m_omx_reader.GetHints (OMXSTREAM_AUDIO, m_config_audio.hints);
   m_omx_reader.GetHints (OMXSTREAM_VIDEO, m_config_video.hints);
 
-  if (m_fps > 0.0f)
-    m_config_video.hints.fpsrate = m_fps * DVD_TIME_BASE, m_config_video.hints.fpsscale = DVD_TIME_BASE;
-
+  if (m_fps > 0.0f) {
+    m_config_video.hints.fpsrate = m_fps * DVD_TIME_BASE;
+    m_config_video.hints.fpsscale = DVD_TIME_BASE;
+    }
   if (m_audio_index_use > 0)
     m_omx_reader.SetActiveStream (OMXSTREAM_AUDIO, m_audio_index_use-1);
 
@@ -962,39 +963,9 @@ int main (int argc, char* argv[]) {
       //{{{  action key
       switch (key) {
         //{{{
-        case KeyConfig::ACTION_SHOW_INFO:
-          break;
-        //}}}
-
-        //{{{
-        case KeyConfig::ACTION_DECREASE_SPEED:
-          break;
-        //}}}
-        //{{{
-        case KeyConfig::ACTION_INCREASE_SPEED:
-          break;
-        //}}}
-
-        //{{{
-        case KeyConfig::ACTION_REWIND:
-          break;
-        //}}}
-
-        //{{{
-        case KeyConfig::ACTION_FAST_FORWARD:
-          break;
-        //}}}
-        //{{{
-        case KeyConfig::ACTION_STEP:
-          m_av_clock->OMXStep();
-          printf("Step\n");
-          {
-            auto t = (unsigned) (m_av_clock->OMXMediaTime()*1e-3);
-            auto dur = m_omx_reader.GetStreamLength() / 1000;
-            DISPLAY_TEXT_SHORT(strprintf("Step\n%02d:%02d:%02d.%03d / %02d:%02d:%02d",
-                (t/3600000), (t/60000)%60, (t/1000)%60, t%1000,
-                (dur/3600), (dur/60)%60, dur%60));
-          }
+        case KeyConfig::ACTION_EXIT:
+          m_stop = true;
+          goto exit;
           break;
         //}}}
 
@@ -1018,15 +989,6 @@ int main (int argc, char* argv[]) {
             m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader.GetAudioIndex() + 1);
             DISPLAY_TEXT_SHORT(strprintf("Audio stream: %d", m_omx_reader.GetAudioIndex() + 1));
           }
-          break;
-        //}}}
-
-        //{{{
-        case KeyConfig::ACTION_PREVIOUS_CHAPTER:
-          break;
-        //}}}
-        //{{{
-        case KeyConfig::ACTION_NEXT_CHAPTER:
           break;
         //}}}
 
@@ -1095,7 +1057,6 @@ int main (int argc, char* argv[]) {
           }
           break;
         //}}}
-
         //{{{
         case KeyConfig::ACTION_DECREASE_SUBTITLE_DELAY:
           if(mHasSubtitle && m_player_subtitles.GetVisible()) {
@@ -1118,53 +1079,60 @@ int main (int argc, char* argv[]) {
         //}}}
 
         //{{{
-        case KeyConfig::ACTION_EXIT:
-          m_stop = true;
-          goto exit;
+        case KeyConfig::ACTION_STEP:
+
+          m_av_clock->OMXStep();
+          printf("Step\n");
+          {
+            auto t = (unsigned) (m_av_clock->OMXMediaTime()*1e-3);
+            auto dur = m_omx_reader.GetStreamLength() / 1000;
+            DISPLAY_TEXT_SHORT(strprintf("Step\n%02d:%02d:%02d.%03d / %02d:%02d:%02d",
+                (t/3600000), (t/60000)%60, (t/1000)%60, t%1000,
+                (dur/3600), (dur/60)%60, dur%60));
+          }
           break;
         //}}}
 
         //{{{
         case KeyConfig::ACTION_SEEK_BACK_SMALL:
-          if(m_omx_reader.CanSeek()) m_incr = -30.0;
+          if (m_omx_reader.CanSeek())
+            m_incr = -30.0;
           break;
         //}}}
         //{{{
         case KeyConfig::ACTION_SEEK_FORWARD_SMALL:
-          if(m_omx_reader.CanSeek()) m_incr = 30.0;
+          if(m_omx_reader.CanSeek())
+            m_incr = 30.0;
           break;
         //}}}
         //{{{
         case KeyConfig::ACTION_SEEK_FORWARD_LARGE:
-          if(m_omx_reader.CanSeek()) m_incr = 600.0;
+          if (m_omx_reader.CanSeek())
+            m_incr = 600.0;
           break;
         //}}}
         //{{{
         case KeyConfig::ACTION_SEEK_BACK_LARGE:
-          if(m_omx_reader.CanSeek()) m_incr = -600.0;
+          if (m_omx_reader.CanSeek())
+            m_incr = -600.0;
           break;
         //}}}
         //{{{
         case KeyConfig::ACTION_SEEK_RELATIVE:
-            m_incr = 1 * 1e-6;
-            break;
+          m_incr = 1 * 1e-6;
+          break;
         //}}}
         //{{{
         case KeyConfig::ACTION_SEEK_ABSOLUTE:
-            break;
-        //}}}
-
-        //{{{
-        case KeyConfig::ACTION_SET_ALPHA:
-            break;
+          break;
         //}}}
 
         //{{{
         case KeyConfig::ACTION_PLAY:
-          m_Pause=false;
-          if(mHasSubtitle) {
+          m_Pause = false;
+          if (mHasSubtitle) {
             m_player_subtitles.Resume();
-          }
+            }
           break;
         //}}}
         //{{{
@@ -1186,33 +1154,25 @@ int main (int argc, char* argv[]) {
             m_av_clock->OMXSetSpeed (1.0f, true, true);
             m_seek_flush = true;
             }
-          if(m_Pause) {
-            if(mHasSubtitle)
+
+          if (m_Pause) {
+            if (mHasSubtitle)
               m_player_subtitles.Pause();
 
             auto t = (unsigned) (m_av_clock->OMXMediaTime()*1e-6);
             auto dur = m_omx_reader.GetStreamLength() / 1000;
             DISPLAY_TEXT_LONG(strprintf("Pause\n%02d:%02d:%02d / %02d:%02d:%02d",
-              (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
-          }
+                                        (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
+            }
           else {
-            if(mHasSubtitle)
+            if (mHasSubtitle)
               m_player_subtitles.Resume();
 
             auto t = (unsigned) (m_av_clock->OMXMediaTime()*1e-6);
             auto dur = m_omx_reader.GetStreamLength() / 1000;
-            DISPLAY_TEXT_SHORT(strprintf("Play\n%02d:%02d:%02d / %02d:%02d:%02d",
-              (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
-          }
-          break;
-        //}}}
-
-        //{{{
-        case KeyConfig::ACTION_MOVE_VIDEO:
-          break;
-        //}}}
-        //{{{
-        case KeyConfig::ACTION_CROP_VIDEO:
+            DISPLAY_TEXT_SHORT (strprintf ("Play\n%02d:%02d:%02d / %02d:%02d:%02d",
+                                           (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
+            }
           break;
         //}}}
 
@@ -1230,28 +1190,35 @@ int main (int argc, char* argv[]) {
         //}}}
 
         //{{{
-        case KeyConfig::ACTION_SET_ASPECT_MODE:
-          break;
-        //}}}
-
-        //{{{
         case KeyConfig::ACTION_DECREASE_VOLUME:
           m_Volume -= 300;
-          m_player_audio.SetVolume(pow(10, m_Volume / 2000.0));
-          DISPLAY_TEXT_SHORT(strprintf("Volume: %.2f dB",
-            m_Volume / 100.0f));
-          printf("Current Volume: %.2fdB\n", m_Volume / 100.0f);
+          m_player_audio.SetVolume (pow (10, m_Volume / 2000.0));
+          DISPLAY_TEXT_SHORT (strprintf ("Volume: %.2f dB", m_Volume / 100.0f));
+          printf ("Current Volume: %.2fdB\n", m_Volume / 100.0f);
           break;
         //}}}
         //{{{
         case KeyConfig::ACTION_INCREASE_VOLUME:
           m_Volume += 300;
-          m_player_audio.SetVolume(pow(10, m_Volume / 2000.0));
-          DISPLAY_TEXT_SHORT(strprintf("Volume: %.2f dB",
-            m_Volume / 100.0f));
-          printf("Current Volume: %.2fdB\n", m_Volume / 100.0f);
+          m_player_audio.SetVolume (pow (10, m_Volume / 2000.0));
+          DISPLAY_TEXT_SHORT (strprintf ("Volume: %.2f dB", m_Volume / 100.0f));
+          printf ("Current Volume: %.2fdB\n", m_Volume / 100.0f);
           break;
         //}}}
+
+        case KeyConfig::ACTION_SET_ASPECT_MODE:
+        case KeyConfig::ACTION_SHOW_INFO:
+        case KeyConfig::ACTION_DECREASE_SPEED:
+        case KeyConfig::ACTION_INCREASE_SPEED:
+        case KeyConfig::ACTION_REWIND:
+        case KeyConfig::ACTION_FAST_FORWARD:
+        case KeyConfig::ACTION_PREVIOUS_CHAPTER:
+        case KeyConfig::ACTION_NEXT_CHAPTER:
+        case KeyConfig::ACTION_SET_ALPHA:
+        case KeyConfig::ACTION_MOVE_VIDEO:
+        case KeyConfig::ACTION_CROP_VIDEO:
+          break;
+
         //{{{
         default:
           break;

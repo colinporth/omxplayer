@@ -1,3 +1,4 @@
+//{{{
 /*
  *      Copyright (C) 2005-2008 Team XBMC
  *      http://www.xbmc.org
@@ -18,27 +19,33 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
-
+//}}}
+//{{{
 #include "system.h"
 #include "OMXOverlayCodecText.h"
 #include "OMXOverlayText.h"
 #include "OMXStreamInfo.h"
 #include "utils/log.h"
 #include "OMXSubtitleTagSami.h"
+//}}}
 
+//{{{
 COMXOverlayCodecText::COMXOverlayCodecText() : COMXOverlayCodec("Text Subtitle Decoder")
 {
   m_pOverlay = NULL;
   m_bIsSSA = false;
 }
-
+//}}}
+//{{{
 COMXOverlayCodecText::~COMXOverlayCodecText()
 {
   if(m_pOverlay)
     delete m_pOverlay;
   m_pOverlay = NULL;
 }
+//}}}
 
+//{{{
 bool COMXOverlayCodecText::Open(COMXStreamInfo &hints)
 {
   m_bIsSSA = hints.codec == AV_CODEC_ID_SSA || hints.codec == AV_CODEC_ID_ASS;
@@ -48,14 +55,17 @@ bool COMXOverlayCodecText::Open(COMXStreamInfo &hints)
     return true;
   return false;
 }
-
+//}}}
+//{{{
 void COMXOverlayCodecText::Dispose()
 {
   if(m_pOverlay)
     delete m_pOverlay;
   m_pOverlay = NULL;
 }
+//}}}
 
+//{{{
 int COMXOverlayCodecText::Decode(BYTE* data, int size, double pts, double duration)
 {
   if(m_pOverlay)
@@ -126,21 +136,25 @@ int COMXOverlayCodecText::Decode(BYTE* data, int size, double pts, double durati
   }
   return OC_OVERLAY;
 }
-
+//}}}
+//{{{
 void COMXOverlayCodecText::Reset()
 {
   if(m_pOverlay)
     delete m_pOverlay;
   m_pOverlay = NULL;
 }
-
+//}}}
+//{{{
 void COMXOverlayCodecText::Flush()
 {
   if(m_pOverlay)
     delete m_pOverlay;
   m_pOverlay = NULL;
 }
+//}}}
 
+//{{{
 COMXOverlay* COMXOverlayCodecText::GetOverlay()
 {
   if(m_pOverlay)
@@ -151,3 +165,4 @@ COMXOverlay* COMXOverlayCodecText::GetOverlay()
   }
   return NULL;
 }
+//}}}

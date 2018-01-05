@@ -1,3 +1,4 @@
+//{{{
 /*
  *      Copyright (C) 2005-2013 Team XBMC
  *      http://www.xbmc.org
@@ -17,7 +18,8 @@
  *  <http://www.gnu.org/licenses/>.
  *
  */
-
+//}}}
+//{{{
 #if (defined HAVE_CONFIG_H) && (!defined WIN32)
   #include "config.h"
 #elif defined(_WIN32)
@@ -31,9 +33,11 @@
 
 #include "OMXClock.h"
 
+//}}}
 #define OMX_PRE_ROLL 200
 #define TP(speed) ((speed) < 0 || (speed) > 4*DVD_PLAYSPEED_NORMAL)
 
+//{{{
 OMXClock::OMXClock()
 {
   m_dllAvFormat.Load();
@@ -49,7 +53,8 @@ OMXClock::OMXClock()
 
   pthread_mutex_init(&m_lock, NULL);
 }
-
+//}}}
+//{{{
 OMXClock::~OMXClock()
 {
   OMXDeinitialize();
@@ -57,17 +62,22 @@ OMXClock::~OMXClock()
   m_dllAvFormat.Unload();
   pthread_mutex_destroy(&m_lock);
 }
+//}}}
 
+//{{{
 void OMXClock::Lock()
 {
   pthread_mutex_lock(&m_lock);
 }
-
+//}}}
+//{{{
 void OMXClock::UnLock()
 {
   pthread_mutex_unlock(&m_lock);
 }
+//}}}
 
+//{{{
 void OMXClock::OMXSetClockPorts(OMX_TIME_CONFIG_CLOCKSTATETYPE *clock, bool has_video, bool has_audio)
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -88,7 +98,8 @@ void OMXClock::OMXSetClockPorts(OMX_TIME_CONFIG_CLOCKSTATETYPE *clock, bool has_
     clock->nWaitMask |= OMX_CLOCKPORT1;
   }
 }
-
+//}}}
+//{{{
 bool OMXClock::OMXSetReferenceClock(bool has_audio, bool lock /* = true */)
 {
   if(lock)
@@ -122,7 +133,9 @@ bool OMXClock::OMXSetReferenceClock(bool has_audio, bool lock /* = true */)
 
   return ret;
 }
+//}}}
 
+//{{{
 bool OMXClock::OMXInitialize()
 {
   std::string componentName = "";
@@ -135,7 +148,8 @@ bool OMXClock::OMXInitialize()
 
   return true;
 }
-
+//}}}
+//{{{
 void OMXClock::OMXDeinitialize()
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -146,7 +160,9 @@ void OMXClock::OMXDeinitialize()
   m_omx_speed = DVD_PLAYSPEED_NORMAL;
   m_last_media_time = 0.0f;
 }
+//}}}
 
+//{{{
 bool OMXClock::OMXStateExecute(bool lock /* = true */)
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -178,7 +194,8 @@ bool OMXClock::OMXStateExecute(bool lock /* = true */)
 
   return true;
 }
-
+//}}}
+//{{{
 void OMXClock::OMXStateIdle(bool lock /* = true */)
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -194,12 +211,15 @@ void OMXClock::OMXStateIdle(bool lock /* = true */)
   if(lock)
     UnLock();
 }
+//}}}
 
+//{{{
 COMXCoreComponent *OMXClock::GetOMXClock()
 {
   return &m_omx_clock;
 }
-
+//}}}
+//{{{
 bool  OMXClock::OMXStop(bool lock /* = true */)
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -233,7 +253,8 @@ bool  OMXClock::OMXStop(bool lock /* = true */)
 
   return true;
 }
-
+//}}}
+//{{{
 bool OMXClock::OMXStep(int steps /* = 1 */, bool lock /* = true */)
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -265,7 +286,8 @@ bool OMXClock::OMXStep(int steps /* = 1 */, bool lock /* = true */)
   CLog::Log(LOGDEBUG, "OMXClock::Step (%d)", steps);
   return true;
 }
-
+//}}}
+//{{{
 bool OMXClock::OMXReset(bool has_video, bool has_audio, bool lock /* = true */)
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -315,7 +337,8 @@ bool OMXClock::OMXReset(bool has_video, bool has_audio, bool lock /* = true */)
 
   return true;
 }
-
+//}}}
+//{{{
 double OMXClock::OMXMediaTime(bool lock /* = true */)
 {
   double pts = 0.0;
@@ -359,7 +382,8 @@ double OMXClock::OMXMediaTime(bool lock /* = true */)
   }
   return pts;
 }
-
+//}}}
+//{{{
 double OMXClock::OMXClockAdjustment(bool lock /* = true */)
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -391,8 +415,9 @@ double OMXClock::OMXClockAdjustment(bool lock /* = true */)
 
   return pts;
 }
+//}}}
 
-
+//{{{
 // Set the media time, so calls to get media time use the updated value,
 // useful after a seek so mediatime is updated immediately (rather than waiting for first decoded packet)
 bool OMXClock::OMXMediaTime(double pts, bool lock /* = true*/)
@@ -435,7 +460,8 @@ bool OMXClock::OMXMediaTime(double pts, bool lock /* = true*/)
 
   return true;
 }
-
+//}}}
+//{{{
 bool OMXClock::OMXPause(bool lock /* = true */)
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -455,7 +481,8 @@ bool OMXClock::OMXPause(bool lock /* = true */)
   }
   return m_pause == true;
 }
-
+//}}}
+//{{{
 bool OMXClock::OMXResume(bool lock /* = true */)
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -475,7 +502,8 @@ bool OMXClock::OMXResume(bool lock /* = true */)
   }
   return m_pause == false;
 }
-
+//}}}
+//{{{
 bool OMXClock::OMXSetSpeed(int speed, bool lock /* = true */, bool pause_resume /* = false */)
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -514,7 +542,8 @@ bool OMXClock::OMXSetSpeed(int speed, bool lock /* = true */, bool pause_resume 
 
   return true;
 }
-
+//}}}
+//{{{
 bool OMXClock::HDMIClockSync(bool lock /* = true */)
 {
   if(m_omx_clock.GetComponent() == NULL)
@@ -551,7 +580,8 @@ bool OMXClock::HDMIClockSync(bool lock /* = true */)
 
   return true;
 }
-
+//}}}
+//{{{
 void OMXClock::OMXSleep(unsigned int dwMilliSeconds)
 {
   struct timespec req;
@@ -560,22 +590,27 @@ void OMXClock::OMXSleep(unsigned int dwMilliSeconds)
 
   while ( nanosleep(&req, &req) == -1 && errno == EINTR && (req.tv_nsec > 0 || req.tv_sec > 0));
 }
+//}}}
 
+//{{{
 static int64_t CurrentHostCounter(void)
 {
   struct timespec now;
   clock_gettime(CLOCK_MONOTONIC, &now);
   return( ((int64_t)now.tv_sec * 1000000000L) + now.tv_nsec );
 }
+//}}}
 
+//{{{
 int64_t OMXClock::GetAbsoluteClock()
 {
   return CurrentHostCounter()/1000;
 }
-
+//}}}
+//{{{
 double OMXClock::GetClock(bool interpolated /*= true*/)
 {
   return GetAbsoluteClock();
 }
+//}}}
 #endif
-

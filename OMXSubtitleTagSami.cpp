@@ -1,3 +1,4 @@
+//{{{
 /*
  *      Copyright (C) 2005-2008 Team XBMC
  *      http://www.xbmc.org
@@ -18,7 +19,8 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
-
+//}}}
+//{{{
 #include "OMXSubtitleTagSami.h"
 //#include "DVDSubtitleStream.h"
 #include "linux/PlatformDefs.h"
@@ -26,13 +28,17 @@
 #include "utils/RegExp.h"
 
 #include <boost/algorithm/string.hpp>
+//}}}
 
+//{{{
 COMXSubtitleTagSami::~COMXSubtitleTagSami()
 {
   delete m_tags;
   delete m_tagOptions;
 }
+//}}}
 
+//{{{
 bool COMXSubtitleTagSami::Init()
 {
   m_tags = new CRegExp(true);
@@ -45,7 +51,9 @@ bool COMXSubtitleTagSami::Init()
 
   return true;
 }
+//}}}
 
+//{{{
 void COMXSubtitleTagSami::ConvertLine(COMXOverlayText* pOverlay, const char* line, int len, const char* lang)
 {
   std::string strUTF8;
@@ -203,7 +211,8 @@ void COMXSubtitleTagSami::ConvertLine(COMXOverlayText* pOverlay, const char* lin
   // add a new text element to our container
   pOverlay->AddElement(new COMXOverlayText::CElementText(strUTF8.c_str()));
 }
-
+//}}}
+//{{{
 void COMXSubtitleTagSami::CloseTag(COMXOverlayText* pOverlay)
 {
   if (m_flag[FLAG_BOLD])
@@ -223,7 +232,8 @@ void COMXSubtitleTagSami::CloseTag(COMXOverlayText* pOverlay)
   }
   m_flag[FLAG_LANGUAGE] = false;
 }
-
+//}}}
+//{{{
 /*
 void COMXSubtitleTagSami::LoadHead(CDVDSubtitleStream* samiStream)
 {
@@ -265,3 +275,4 @@ void COMXSubtitleTagSami::LoadHead(CDVDSubtitleStream* samiStream)
   }
 }
 */
+//}}}

@@ -1,3 +1,4 @@
+//{{{
 /*
  *      Copyright (C) 2005-2008 Team XBMC
  *      http://www.xbmc.org
@@ -18,6 +19,8 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
+//}}}
+//{{{
 
 #include "OMXAudioCodecOMX.h"
 #ifdef TARGET_LINUX
@@ -26,11 +29,13 @@
 #include "utils/log.h"
 
 #include "utils/PCMRemap.h"
+//}}}
 
 // the size of the audio_render output port buffers
 #define AUDIO_DECODE_OUTPUT_BUFFER (32*1024)
 static const char rounded_up_channels_shift[] = {0,0,1,2,2,3,3,3,3};
 
+//{{{
 COMXAudioCodecOMX::COMXAudioCodecOMX()
 {
   m_pBufferOutput = NULL;
@@ -49,7 +54,8 @@ COMXAudioCodecOMX::COMXAudioCodecOMX()
   m_iSampleFormat = AV_SAMPLE_FMT_NONE;
   m_desiredSampleFormat = AV_SAMPLE_FMT_NONE;
 }
-
+//}}}
+//{{{
 COMXAudioCodecOMX::~COMXAudioCodecOMX()
 {
   m_dllAvUtil.av_free(m_pBufferOutput);
@@ -58,7 +64,9 @@ COMXAudioCodecOMX::~COMXAudioCodecOMX()
   m_iBufferOutputUsed = 0;
   Dispose();
 }
+//}}}
 
+//{{{
 bool COMXAudioCodecOMX::Open(COMXStreamInfo &hints, enum PCMLayout layout)
 {
   AVCodec* pCodec;
@@ -132,7 +140,8 @@ bool COMXAudioCodecOMX::Open(COMXStreamInfo &hints, enum PCMLayout layout)
   m_desiredSampleFormat = m_pCodecContext->sample_fmt == AV_SAMPLE_FMT_S16 ? AV_SAMPLE_FMT_S16 : AV_SAMPLE_FMT_FLTP;
   return true;
 }
-
+//}}}
+//{{{
 void COMXAudioCodecOMX::Dispose()
 {
   if (m_pFrame1) m_dllAvUtil.av_free(m_pFrame1);
@@ -157,6 +166,9 @@ void COMXAudioCodecOMX::Dispose()
 
   m_bGotFrame = false;
 }
+//}}}
+
+//{{{
 
 int COMXAudioCodecOMX::Decode(BYTE* pData, int iSize, double dts, double pts)
 {
@@ -201,7 +213,8 @@ int COMXAudioCodecOMX::Decode(BYTE* pData, int iSize, double dts, double pts)
   }
   return iBytesUsed;
 }
-
+//}}}
+//{{{
 int COMXAudioCodecOMX::GetData(BYTE** dst, double &dts, double &pts)
 {
   if (!m_bGotFrame)
@@ -251,9 +264,9 @@ int COMXAudioCodecOMX::GetData(BYTE** dst, double &dts, double &pts)
     {
       m_iSampleFormat = m_pCodecContext->sample_fmt;
       m_pConvert = m_dllSwResample.swr_alloc_set_opts(NULL,
-                      m_dllAvUtil.av_get_default_channel_layout(m_pCodecContext->channels), 
+                      m_dllAvUtil.av_get_default_channel_layout(m_pCodecContext->channels),
                       m_desiredSampleFormat, m_pCodecContext->sample_rate,
-                      m_dllAvUtil.av_get_default_channel_layout(m_pCodecContext->channels), 
+                      m_dllAvUtil.av_get_default_channel_layout(m_pCodecContext->channels),
                       m_pCodecContext->sample_fmt, m_pCodecContext->sample_rate,
                       0, NULL);
 
@@ -293,42 +306,51 @@ int COMXAudioCodecOMX::GetData(BYTE** dst, double &dts, double &pts)
   m_iBufferOutputUsed += outputSize;
   return 0;
 }
+//}}}
 
+//{{{
 void COMXAudioCodecOMX::Reset()
 {
   if (m_pCodecContext) m_dllAvCodec.avcodec_flush_buffers(m_pCodecContext);
   m_bGotFrame = false;
   m_iBufferOutputUsed = 0;
 }
+//}}}
 
+//{{{
 int COMXAudioCodecOMX::GetChannels()
 {
   if (!m_pCodecContext)
     return 0;
   return m_pCodecContext->channels;
 }
-
+//}}}
+//{{{
 int COMXAudioCodecOMX::GetSampleRate()
 {
   if (!m_pCodecContext)
     return 0;
   return m_pCodecContext->sample_rate;
 }
-
+//}}}
+//{{{
 int COMXAudioCodecOMX::GetBitsPerSample()
 {
   if (!m_pCodecContext)
     return 0;
   return m_pCodecContext->sample_fmt == AV_SAMPLE_FMT_S16 ? 16 : 32;
 }
-
+//}}}
+//{{{
 int COMXAudioCodecOMX::GetBitRate()
 {
   if (!m_pCodecContext)
     return 0;
   return m_pCodecContext->bit_rate;
 }
+//}}}
 
+//{{{
 static unsigned count_bits(int64_t value)
 {
   unsigned bits = 0;
@@ -336,7 +358,9 @@ static unsigned count_bits(int64_t value)
     value &= value - 1;
   return bits;
 }
+//}}}
 
+//{{{
 uint64_t COMXAudioCodecOMX::GetChannelMap()
 {
   uint64_t layout;
@@ -352,3 +376,4 @@ uint64_t COMXAudioCodecOMX::GetChannelMap()
 
   return layout;
 }
+//}}}

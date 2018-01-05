@@ -1,3 +1,4 @@
+//{{{
 // Author: Torarin Hals Bakke (2012)
 
 // Boost Software License - Version 1.0 - August 17th, 2003
@@ -23,13 +24,16 @@
 // FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
-
+//}}}
+//{{{
 #include "Srt.h"
 
 #include <fstream>
 #include <utility>
+//}}}
 
 namespace {
+  //{{{
   unsigned int timecode_to_milliseconds(unsigned int h,
                                         unsigned int m,
                                         unsigned int s,
@@ -40,8 +44,10 @@ namespace {
            s*1000 +
            f;
   }
+  //}}}
 }
 
+//{{{
 template <typename T, typename U>
 T& getline(T&& input, U&& str) {
   std::getline(std::forward<T>(input), std::forward<U>(str));
@@ -50,7 +56,8 @@ T& getline(T&& input, U&& str) {
   }
   return input;
 }
-
+//}}}
+//{{{
 bool ReadSrt(const std::string& filename, std::vector<Subtitle>& subtitles) {
   std::ifstream srt(filename);
   if (!srt) return false;
@@ -82,3 +89,4 @@ bool ReadSrt(const std::string& filename, std::vector<Subtitle>& subtitles) {
 
   return true;
 }
+//}}}

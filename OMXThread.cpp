@@ -1,3 +1,4 @@
+//{{{
 /*
  *      Copyright (C) 2005-2008 Team XBMC
  *      http://www.xbmc.org
@@ -18,7 +19,8 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
-
+//}}}
+//{{{
 #if (defined HAVE_CONFIG_H) && (!defined WIN32)
   #include "config.h"
 #elif defined(_WIN32)
@@ -32,12 +34,14 @@
 #include <unistd.h>
 
 #include "utils/log.h"
+//}}}
 
 #ifdef CLASSNAME
 #undef CLASSNAME
 #endif
 #define CLASSNAME "OMXThread"
 
+//{{{
 OMXThread::OMXThread()
 {
   pthread_mutex_init(&m_lock, NULL);
@@ -47,13 +51,16 @@ OMXThread::OMXThread()
   m_bStop     = false;
   m_running   = false;
 }
-
+//}}}
+//{{{
 OMXThread::~OMXThread()
 {
   pthread_mutex_destroy(&m_lock);
   pthread_attr_destroy(&m_tattr);
 }
+//}}}
 
+//{{{
 bool OMXThread::StopThread()
 {
   if(!m_running)
@@ -71,7 +78,9 @@ bool OMXThread::StopThread()
   CLog::Log(LOGDEBUG, "%s::%s - Thread stopped\n", CLASSNAME, __func__);
   return true;
 }
+//}}}
 
+//{{{
 bool OMXThread::Create()
 {
   if(m_running)
@@ -88,17 +97,21 @@ bool OMXThread::Create()
   CLog::Log(LOGDEBUG, "%s::%s - Thread with id %d started\n", CLASSNAME, __func__, (int)m_thread);
   return true;
 }
-
+//}}}
+//{{{
 bool OMXThread::Running()
 {
   return m_running;
 }
+//}}}
 
+//{{{
 pthread_t OMXThread::ThreadHandle()
 {
   return m_thread;
 }
-
+//}}}
+//{{{
 void *OMXThread::Run(void *arg)
 {
   OMXThread *thread = static_cast<OMXThread *>(arg);
@@ -107,7 +120,9 @@ void *OMXThread::Run(void *arg)
   CLog::Log(LOGDEBUG, "%s::%s - Exited thread with  id %d\n", CLASSNAME, __func__, (int)thread->ThreadHandle());
   pthread_exit(NULL);
 }
+//}}}
 
+//{{{
 void OMXThread::Lock()
 {
   if(!m_running)
@@ -118,7 +133,8 @@ void OMXThread::Lock()
 
   pthread_mutex_lock(&m_lock);
 }
-
+//}}}
+//{{{
 void OMXThread::UnLock()
 {
   if(!m_running)
@@ -129,4 +145,4 @@ void OMXThread::UnLock()
 
   pthread_mutex_unlock(&m_lock);
 }
-
+//}}}

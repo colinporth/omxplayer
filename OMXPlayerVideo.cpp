@@ -1,3 +1,4 @@
+//{{{
 /*
  *      Copyright (C) 2005-2008 Team XBMC
  *      http://www.xbmc.org
@@ -18,7 +19,8 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
-
+//}}}
+//{{{
 #if (defined HAVE_CONFIG_H) && (!defined WIN32)
   #include "config.h"
 #elif defined(_WIN32)
@@ -32,7 +34,9 @@
 #include <sys/time.h>
 
 #include "linux/XMemUtils.h"
+//}}}
 
+//{{{
 OMXPlayerVideo::OMXPlayerVideo()
 {
   m_open          = false;
@@ -52,7 +56,8 @@ OMXPlayerVideo::OMXPlayerVideo()
   pthread_mutex_init(&m_lock, NULL);
   pthread_mutex_init(&m_lock_decoder, NULL);
 }
-
+//}}}
+//{{{
 OMXPlayerVideo::~OMXPlayerVideo()
 {
   Close();
@@ -62,36 +67,44 @@ OMXPlayerVideo::~OMXPlayerVideo()
   pthread_mutex_destroy(&m_lock);
   pthread_mutex_destroy(&m_lock_decoder);
 }
+//}}}
 
+//{{{
 void OMXPlayerVideo::Lock()
 {
   if(m_config.use_thread)
     pthread_mutex_lock(&m_lock);
 }
-
+//}}}
+//{{{
 void OMXPlayerVideo::UnLock()
 {
   if(m_config.use_thread)
     pthread_mutex_unlock(&m_lock);
 }
+//}}}
 
+//{{{
 void OMXPlayerVideo::LockDecoder()
 {
   if(m_config.use_thread)
     pthread_mutex_lock(&m_lock_decoder);
 }
-
+//}}}
+//{{{
 void OMXPlayerVideo::UnLockDecoder()
 {
   if(m_config.use_thread)
     pthread_mutex_unlock(&m_lock_decoder);
 }
+//}}}
 
+//{{{
 bool OMXPlayerVideo::Open(OMXClock *av_clock, const OMXVideoConfig &config)
 {
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock)
     return false;
-  
+
   if(ThreadHandle())
     Close();
 
@@ -120,14 +133,15 @@ bool OMXPlayerVideo::Open(OMXClock *av_clock, const OMXVideoConfig &config)
 
   return true;
 }
-
+//}}}
+//{{{
 bool OMXPlayerVideo::Reset()
 {
   // Quick reset of internal state back to a default that is ready to play from
   // the start or a new position.  This replaces a combination of Close and then
   // Open calls but does away with the DLL unloading/loading, decoder reset, and
   // thread reset.
-  Flush();   
+  Flush();
   m_stream_id         = -1;
   m_pStream           = NULL;
   m_iCurrentPts       = DVD_NOPTS_VALUE;
@@ -144,7 +158,8 @@ bool OMXPlayerVideo::Reset()
   // of the reset.  For now just return success (true).
   return true;
 }
-
+//}}}
+//{{{
 bool OMXPlayerVideo::Close()
 {
   m_bAbort  = true;
@@ -173,22 +188,29 @@ bool OMXPlayerVideo::Close()
 
   return true;
 }
+//}}}
 
+//{{{
 void OMXPlayerVideo::SetAlpha(int alpha)
 {
   m_decoder->SetAlpha(alpha);
 }
-
+//}}}
+//{{{
 void OMXPlayerVideo::SetVideoRect(const CRect& SrcRect, const CRect& DestRect)
 {
   m_decoder->SetVideoRect(SrcRect, DestRect);
 }
-
+//}}}
+//{{{
 void OMXPlayerVideo::SetVideoRect(int aspectMode)
 {
   m_decoder->SetVideoRect(aspectMode);
 }
 
+//}}}
+
+//{{{
 bool OMXPlayerVideo::Decode(OMXPacket *pkt)
 {
   if(!pkt)
@@ -216,7 +238,8 @@ bool OMXPlayerVideo::Decode(OMXPacket *pkt)
   m_decoder->Decode(pkt->data, pkt->size, dts, pts);
   return true;
 }
-
+//}}}
+//{{{
 void OMXPlayerVideo::Process()
 {
   OMXPacket *omx_pkt = NULL;
@@ -265,7 +288,8 @@ void OMXPlayerVideo::Process()
   if(omx_pkt)
     OMXReader::FreePacket(omx_pkt);
 }
-
+//}}}
+//{{{
 void OMXPlayerVideo::Flush()
 {
   m_flush_requested = true;
@@ -275,7 +299,7 @@ void OMXPlayerVideo::Flush()
   m_flush = true;
   while (!m_packets.empty())
   {
-    OMXPacket *pkt = m_packets.front(); 
+    OMXPacket *pkt = m_packets.front();
     m_packets.pop_front();
     OMXReader::FreePacket(pkt);
   }
@@ -286,7 +310,9 @@ void OMXPlayerVideo::Flush()
   UnLockDecoder();
   UnLock();
 }
+//}}}
 
+//{{{
 bool OMXPlayerVideo::AddPacket(OMXPacket *pkt)
 {
   bool ret = false;
@@ -309,8 +335,9 @@ bool OMXPlayerVideo::AddPacket(OMXPacket *pkt)
 
   return ret;
 }
+//}}}
 
-
+//{{{
 bool OMXPlayerVideo::OpenDecoder()
 {
   if (m_config.hints.fpsrate && m_config.hints.fpsscale)
@@ -340,7 +367,8 @@ bool OMXPlayerVideo::OpenDecoder()
 
   return true;
 }
-
+//}}}
+//{{{
 bool OMXPlayerVideo::CloseDecoder()
 {
   if(m_decoder)
@@ -348,7 +376,9 @@ bool OMXPlayerVideo::CloseDecoder()
   m_decoder   = NULL;
   return true;
 }
+//}}}
 
+//{{{
 int  OMXPlayerVideo::GetDecoderBufferSize()
 {
   if(m_decoder)
@@ -356,7 +386,8 @@ int  OMXPlayerVideo::GetDecoderBufferSize()
   else
     return 0;
 }
-
+//}}}
+//{{{
 int  OMXPlayerVideo::GetDecoderFreeSpace()
 {
   if(m_decoder)
@@ -364,17 +395,20 @@ int  OMXPlayerVideo::GetDecoderFreeSpace()
   else
     return 0;
 }
+//}}}
 
+//{{{
 void OMXPlayerVideo::SubmitEOS()
 {
   if(m_decoder)
     m_decoder->SubmitEOS();
 }
-
+//}}}
+//{{{
 bool OMXPlayerVideo::IsEOS()
 {
   if(!m_decoder)
     return false;
   return m_packets.empty() && (!m_decoder || m_decoder->IsEOS());
 }
-
+//}}}

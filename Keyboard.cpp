@@ -61,25 +61,20 @@ Keyboard::~Keyboard()
 void Keyboard::Close()
 {
   if (ThreadHandle())
-  {
     StopThread();
-  }
+
   dbus_disconnect();
   restore_term();
-}
+  }
 //}}}
 
 //{{{
 void Keyboard::restore_term()
 {
   if (isatty(STDIN_FILENO))
-  {
     tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
-  }
   else
-  {
     fcntl(STDIN_FILENO, F_SETFL, orig_fl);
-  }
 }
 //}}}
 

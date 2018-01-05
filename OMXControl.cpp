@@ -1,3 +1,4 @@
+//{{{
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -12,8 +13,9 @@
 #include "utils/log.h"
 #include "OMXControl.h"
 #include "KeyConfig.h"
+//}}}
 
-
+//{{{
 void ToURI(const std::string& str, char *uri)
 {
   //Test if URL/URI
@@ -47,51 +49,65 @@ void ToURI(const std::string& str, char *uri)
     free(real_path);
   }
 }
+//}}}
 
+//{{{
 void deprecatedMessage()
 {
   CLog::Log(LOGWARNING, "DBus property access through direct method is deprecated. Use Get/Set methods instead.");
 }
 
+//}}}
 
 #define CLASSNAME "OMXControl"
-
-OMXControlResult::OMXControlResult( int newKey ) {
+//{{{
+OMXControlResult::OMXControlResult (int newKey ) {
   key = newKey;
 }
-
-OMXControlResult::OMXControlResult( int newKey, int64_t newArg ) {
+//}}}
+//{{{
+OMXControlResult::OMXControlResult (int newKey, int64_t newArg ) {
   key = newKey;
   arg = newArg;
 }
-
-OMXControlResult::OMXControlResult( int newKey, const char *newArg ) {
+//}}}
+//{{{
+OMXControlResult::OMXControlResult (int newKey, const char *newArg ) {
   key = newKey;
   winarg = newArg;
 }
+//}}}
 
+//{{{
 int OMXControlResult::getKey() {
   return key;
 }
-
+//}}}
+//{{{
 int64_t OMXControlResult::getArg() {
   return arg;
 }
-
+//}}}
+//{{{
 const char *OMXControlResult::getWinArg() {
   return winarg;
 }
+//}}}
 
-OMXControl::OMXControl() 
+//{{{
+OMXControl::OMXControl()
 {
 
 }
-
-OMXControl::~OMXControl() 
+//}}}
+//{{{
+OMXControl::~OMXControl()
 {
     dbus_disconnect();
 }
+//}}}
 
+//{{{
 int OMXControl::init(OMXClock *m_av_clock, OMXPlayerAudio *m_player_audio, OMXPlayerSubtitles *m_player_subtitles, OMXReader *m_omx_reader, std::string& dbus_name)
 {
   int ret = 0;
@@ -125,13 +141,16 @@ int OMXControl::init(OMXClock *m_av_clock, OMXPlayerAudio *m_player_audio, OMXPl
   }
   return ret;
 }
-
+//}}}
+//{{{
 void OMXControl::dispatch()
 {
   if (bus)
     dbus_connection_read_write(bus, 0);
 }
+//}}}
 
+//{{{
 int OMXControl::dbus_connect(std::string& dbus_name)
 {
   DBusError error;
@@ -176,7 +195,8 @@ fail:
 
     return -1;
 }
-
+//}}}
+//{{{
 void OMXControl::dbus_disconnect()
 {
     if (bus)
@@ -186,7 +206,9 @@ void OMXControl::dbus_disconnect()
         bus = NULL;
     }
 }
+//}}}
 
+//{{{
 OMXControlResult OMXControl::getEvent()
 {
   if (!bus)
@@ -204,7 +226,8 @@ OMXControlResult OMXControl::getEvent()
 
   return result;
 }
-
+//}}}
+//{{{
 OMXControlResult OMXControl::handle_event(DBusMessage *m)
 {
   //----------------------------DBus root interface-----------------------------
@@ -469,54 +492,54 @@ OMXControlResult OMXControl::handle_event(DBusMessage *m)
     dbus_message_iter_init(m, &args);
     if(dbus_message_iter_has_next(&args))
     {
-		//The interface name
-		if( DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&args) ) 
-			dbus_message_iter_get_basic (&args, &interface);
-		else
-		{
-			printf("setE1\n");
-			CLog::Log(LOGWARNING, "Unhandled dbus message, member: %s interface: %s type: %d path: %s", dbus_message_get_member(m), dbus_message_get_interface(m), dbus_message_get_type(m), dbus_message_get_path(m) );
-			dbus_error_free(&error);
-			dbus_respond_error(m, DBUS_ERROR_INVALID_ARGS, "Invalid arguments");
-			return KeyConfig::ACTION_BLANK;
-		}
-		//The property name
-		if( dbus_message_iter_next(&args) && DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&args) )
-			dbus_message_iter_get_basic (&args, &property);
-		else
-		{
-			CLog::Log(LOGWARNING, "Unhandled dbus message, member: %s interface: %s type: %d path: %s", dbus_message_get_member(m), dbus_message_get_interface(m), dbus_message_get_type(m), dbus_message_get_path(m) );
-			dbus_error_free(&error);
-			dbus_respond_error(m, DBUS_ERROR_INVALID_ARGS, "Invalid arguments");
-			return KeyConfig::ACTION_BLANK;
-		}
-		//The value (either double or double in variant)
-		if (dbus_message_iter_next(&args))
-		{
-			//Simply a double
-			if (DBUS_TYPE_DOUBLE == dbus_message_iter_get_arg_type(&args))
-			{
-				dbus_message_iter_get_basic(&args, &new_property_value);
-			}
-			//A double within a variant
-			else if(DBUS_TYPE_VARIANT == dbus_message_iter_get_arg_type(&args))
-			{
-				DBusMessageIter variant;
-				dbus_message_iter_recurse(&args, &variant);
-				if(DBUS_TYPE_DOUBLE == dbus_message_iter_get_arg_type(&variant))
-				{
-					dbus_message_iter_get_basic(&variant, &new_property_value);
-				}
-			}
-			else
-			{
-				CLog::Log(LOGWARNING, "Unhandled dbus message, member: %s interface: %s type: %d path: %s", dbus_message_get_member(m), dbus_message_get_interface(m), dbus_message_get_type(m), dbus_message_get_path(m) );
-				dbus_error_free(&error);
-				dbus_respond_error(m, DBUS_ERROR_INVALID_ARGS, "Invalid arguments");
-				return KeyConfig::ACTION_BLANK;
-			}
-		}
-	}
+    //The interface name
+    if( DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&args) )
+      dbus_message_iter_get_basic (&args, &interface);
+    else
+    {
+      printf("setE1\n");
+      CLog::Log(LOGWARNING, "Unhandled dbus message, member: %s interface: %s type: %d path: %s", dbus_message_get_member(m), dbus_message_get_interface(m), dbus_message_get_type(m), dbus_message_get_path(m) );
+      dbus_error_free(&error);
+      dbus_respond_error(m, DBUS_ERROR_INVALID_ARGS, "Invalid arguments");
+      return KeyConfig::ACTION_BLANK;
+    }
+    //The property name
+    if( dbus_message_iter_next(&args) && DBUS_TYPE_STRING == dbus_message_iter_get_arg_type(&args) )
+      dbus_message_iter_get_basic (&args, &property);
+    else
+    {
+      CLog::Log(LOGWARNING, "Unhandled dbus message, member: %s interface: %s type: %d path: %s", dbus_message_get_member(m), dbus_message_get_interface(m), dbus_message_get_type(m), dbus_message_get_path(m) );
+      dbus_error_free(&error);
+      dbus_respond_error(m, DBUS_ERROR_INVALID_ARGS, "Invalid arguments");
+      return KeyConfig::ACTION_BLANK;
+    }
+    //The value (either double or double in variant)
+    if (dbus_message_iter_next(&args))
+    {
+      //Simply a double
+      if (DBUS_TYPE_DOUBLE == dbus_message_iter_get_arg_type(&args))
+      {
+        dbus_message_iter_get_basic(&args, &new_property_value);
+      }
+      //A double within a variant
+      else if(DBUS_TYPE_VARIANT == dbus_message_iter_get_arg_type(&args))
+      {
+        DBusMessageIter variant;
+        dbus_message_iter_recurse(&args, &variant);
+        if(DBUS_TYPE_DOUBLE == dbus_message_iter_get_arg_type(&variant))
+        {
+          dbus_message_iter_get_basic(&variant, &new_property_value);
+        }
+      }
+      else
+      {
+        CLog::Log(LOGWARNING, "Unhandled dbus message, member: %s interface: %s type: %d path: %s", dbus_message_get_member(m), dbus_message_get_interface(m), dbus_message_get_type(m), dbus_message_get_path(m) );
+        dbus_error_free(&error);
+        dbus_respond_error(m, DBUS_ERROR_INVALID_ARGS, "Invalid arguments");
+        return KeyConfig::ACTION_BLANK;
+      }
+    }
+  }
     if ( dbus_error_is_set(&error) )
     {
         CLog::Log(LOGWARNING, "Unhandled dbus message, member: %s interface: %s type: %d path: %s", dbus_message_get_member(m), dbus_message_get_interface(m), dbus_message_get_type(m), dbus_message_get_path(m) );
@@ -1132,7 +1155,9 @@ OMXControlResult OMXControl::handle_event(DBusMessage *m)
 
   return KeyConfig::ACTION_BLANK;
 }
+//}}}
 
+//{{{
 DBusHandlerResult OMXControl::dbus_respond_error(DBusMessage *m, const char *name, const char *msg)
 {
   DBusMessage *reply;
@@ -1147,7 +1172,8 @@ DBusHandlerResult OMXControl::dbus_respond_error(DBusMessage *m, const char *nam
 
   return DBUS_HANDLER_RESULT_HANDLED;
 }
-
+//}}}
+//{{{
 DBusHandlerResult OMXControl::dbus_respond_ok(DBusMessage *m)
 {
   DBusMessage *reply;
@@ -1162,7 +1188,8 @@ DBusHandlerResult OMXControl::dbus_respond_ok(DBusMessage *m)
 
   return DBUS_HANDLER_RESULT_HANDLED;
 }
-
+//}}}
+//{{{
 DBusHandlerResult OMXControl::dbus_respond_string(DBusMessage *m, const char *text)
 {
   DBusMessage *reply;
@@ -1181,7 +1208,8 @@ DBusHandlerResult OMXControl::dbus_respond_string(DBusMessage *m, const char *te
 
   return DBUS_HANDLER_RESULT_HANDLED;
 }
-
+//}}}
+//{{{
 DBusHandlerResult OMXControl::dbus_respond_int64(DBusMessage *m, int64_t i)
 {
   DBusMessage *reply;
@@ -1200,14 +1228,15 @@ DBusHandlerResult OMXControl::dbus_respond_int64(DBusMessage *m, int64_t i)
 
   return DBUS_HANDLER_RESULT_HANDLED;
 }
-
+//}}}
+//{{{
 DBusHandlerResult OMXControl::dbus_respond_double(DBusMessage *m, double d)
 {
   DBusMessage *reply;
 
   reply = dbus_message_new_method_return(m);
 
-  if (!reply) 
+  if (!reply)
   {
     CLog::Log(LOGWARNING, "Failed to allocate message");
     return DBUS_HANDLER_RESULT_NEED_MEMORY;
@@ -1219,7 +1248,8 @@ DBusHandlerResult OMXControl::dbus_respond_double(DBusMessage *m, double d)
 
   return DBUS_HANDLER_RESULT_HANDLED;
 }
-
+//}}}
+//{{{
 DBusHandlerResult OMXControl::dbus_respond_boolean(DBusMessage *m, int b)
 {
   DBusMessage *reply;
@@ -1238,7 +1268,8 @@ DBusHandlerResult OMXControl::dbus_respond_boolean(DBusMessage *m, int b)
 
   return DBUS_HANDLER_RESULT_HANDLED;
 }
-
+//}}}
+//{{{
 DBusHandlerResult OMXControl::dbus_respond_array(DBusMessage *m, const char *array[], int size)
 {
   DBusMessage *reply;
@@ -1257,3 +1288,4 @@ DBusHandlerResult OMXControl::dbus_respond_array(DBusMessage *m, const char *arr
 
   return DBUS_HANDLER_RESULT_HANDLED;
 }
+//}}}

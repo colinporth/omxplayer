@@ -1,3 +1,4 @@
+//{{{
 /*
  *      Copyright (C) 2005-2008 Team XBMC
  *      http://www.xbmc.org
@@ -18,15 +19,17 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
-
+//}}}
 #include "OMXStreamInfo.h"
 
-COMXStreamInfo::COMXStreamInfo()                                                     
-{ 
-  extradata = NULL; 
-  Clear(); 
+//{{{
+COMXStreamInfo::COMXStreamInfo()
+{
+  extradata = NULL;
+  Clear();
 }
-
+//}}}
+//{{{
 COMXStreamInfo::~COMXStreamInfo()
 {
   //if( extradata && extrasize ) free(extradata);
@@ -34,8 +37,9 @@ COMXStreamInfo::~COMXStreamInfo()
   extradata = NULL;
   extrasize = 0;
 }
+//}}}
 
-
+//{{{
 void COMXStreamInfo::Clear()
 {
   codec = AV_CODEC_ID_NONE;
@@ -69,3 +73,4 @@ void COMXStreamInfo::Clear()
   framesize  = 0;
   syncword   = 0;
 }
+//}}}

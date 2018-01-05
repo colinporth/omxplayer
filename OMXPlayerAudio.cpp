@@ -1,3 +1,4 @@
+//{{{
 /*
  *      Copyright (C) 2005-2008 Team XBMC
  *      http://www.xbmc.org
@@ -18,6 +19,8 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
+//}}}
+//{{{
 
 #if (defined HAVE_CONFIG_H) && (!defined WIN32)
   #include "config.h"
@@ -31,7 +34,9 @@
 #include <unistd.h>
 
 #include "linux/XMemUtils.h"
+//}}}
 
+//{{{
 OMXPlayerAudio::OMXPlayerAudio()
 {
   m_open          = false;
@@ -54,7 +59,8 @@ OMXPlayerAudio::OMXPlayerAudio()
   pthread_mutex_init(&m_lock, NULL);
   pthread_mutex_init(&m_lock_decoder, NULL);
 }
-
+//}}}
+//{{{
 OMXPlayerAudio::~OMXPlayerAudio()
 {
   Close();
@@ -64,31 +70,39 @@ OMXPlayerAudio::~OMXPlayerAudio()
   pthread_mutex_destroy(&m_lock);
   pthread_mutex_destroy(&m_lock_decoder);
 }
+//}}}
 
+//{{{
 void OMXPlayerAudio::Lock()
 {
   if(m_config.use_thread)
     pthread_mutex_lock(&m_lock);
 }
-
+//}}}
+//{{{
 void OMXPlayerAudio::UnLock()
 {
   if(m_config.use_thread)
     pthread_mutex_unlock(&m_lock);
 }
+//}}}
 
+//{{{
 void OMXPlayerAudio::LockDecoder()
 {
   if(m_config.use_thread)
     pthread_mutex_lock(&m_lock_decoder);
 }
-
+//}}}
+//{{{
 void OMXPlayerAudio::UnLockDecoder()
 {
   if(m_config.use_thread)
     pthread_mutex_unlock(&m_lock_decoder);
 }
+//}}}
 
+//{{{
 bool OMXPlayerAudio::Open(OMXClock *av_clock, const OMXAudioConfig &config, OMXReader *omx_reader)
 {
   if(ThreadHandle())
@@ -96,7 +110,7 @@ bool OMXPlayerAudio::Open(OMXClock *av_clock, const OMXAudioConfig &config, OMXR
 
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllAvFormat.Load() || !av_clock)
     return false;
-  
+
   m_dllAvFormat.av_register_all();
 
   m_config      = config;
@@ -132,7 +146,8 @@ bool OMXPlayerAudio::Open(OMXClock *av_clock, const OMXAudioConfig &config, OMXR
 
   return true;
 }
-
+//}}}
+//{{{
 bool OMXPlayerAudio::Close()
 {
   m_bAbort  = true;
@@ -162,8 +177,9 @@ bool OMXPlayerAudio::Close()
 
   return true;
 }
+//}}}
 
-
+//{{{
 bool OMXPlayerAudio::Decode(OMXPacket *pkt)
 {
   if(!pkt)
@@ -174,7 +190,7 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
     return true;
 
   if(!m_omx_reader->IsActive(OMXSTREAM_AUDIO, pkt->stream_index))
-    return true; 
+    return true;
 
   int channels = pkt->hints.channels;
 
@@ -273,7 +289,8 @@ bool OMXPlayerAudio::Decode(OMXPacket *pkt)
 
   return true;
 }
-
+//}}}
+//{{{
 void OMXPlayerAudio::Process()
 {
   OMXPacket *omx_pkt = NULL;
@@ -303,7 +320,7 @@ void OMXPlayerAudio::Process()
       m_packets.pop_front();
     }
     UnLock();
-    
+
     LockDecoder();
     if(m_flush && omx_pkt)
     {
@@ -322,7 +339,8 @@ void OMXPlayerAudio::Process()
   if(omx_pkt)
     OMXReader::FreePacket(omx_pkt);
 }
-
+//}}}
+//{{{
 void OMXPlayerAudio::Flush()
 {
   m_flush_requested = true;
@@ -334,7 +352,7 @@ void OMXPlayerAudio::Flush()
   m_flush = true;
   while (!m_packets.empty())
   {
-    OMXPacket *pkt = m_packets.front(); 
+    OMXPacket *pkt = m_packets.front();
     m_packets.pop_front();
     OMXReader::FreePacket(pkt);
   }
@@ -345,7 +363,9 @@ void OMXPlayerAudio::Flush()
   UnLockDecoder();
   UnLock();
 }
+//}}}
 
+//{{{
 bool OMXPlayerAudio::AddPacket(OMXPacket *pkt)
 {
   bool ret = false;
@@ -368,7 +388,9 @@ bool OMXPlayerAudio::AddPacket(OMXPacket *pkt)
 
   return ret;
 }
+//}}}
 
+//{{{
 bool OMXPlayerAudio::OpenAudioCodec()
 {
   m_pAudioCodec = new COMXAudioCodecOMX();
@@ -381,14 +403,17 @@ bool OMXPlayerAudio::OpenAudioCodec()
 
   return true;
 }
-
+//}}}
+//{{{
 void OMXPlayerAudio::CloseAudioCodec()
 {
   if(m_pAudioCodec)
     delete m_pAudioCodec;
   m_pAudioCodec = NULL;
 }
+//}}}
 
+//{{{
 bool OMXPlayerAudio::IsPassthrough(COMXStreamInfo hints)
 {
   if(m_config.device == "omx:local")
@@ -411,7 +436,9 @@ bool OMXPlayerAudio::IsPassthrough(COMXStreamInfo hints)
 
   return passthrough;
 }
+//}}}
 
+//{{{
 bool OMXPlayerAudio::OpenDecoder()
 {
   bool bAudioRenderOpen = false;
@@ -430,10 +457,10 @@ bool OMXPlayerAudio::OpenDecoder()
   bAudioRenderOpen = m_decoder->Initialize(m_av_clock, m_config, m_pAudioCodec->GetChannelMap(), m_pAudioCodec->GetBitsPerSample());
 
   m_codec_name = m_omx_reader->GetCodecName(OMXSTREAM_AUDIO);
-  
+
   if(!bAudioRenderOpen)
   {
-    delete m_decoder; 
+    delete m_decoder;
     m_decoder = NULL;
     return false;
   }
@@ -457,7 +484,8 @@ bool OMXPlayerAudio::OpenDecoder()
 
   return true;
 }
-
+//}}}
+//{{{
 bool OMXPlayerAudio::CloseDecoder()
 {
   if(m_decoder)
@@ -465,7 +493,9 @@ bool OMXPlayerAudio::CloseDecoder()
   m_decoder   = NULL;
   return true;
 }
+//}}}
 
+//{{{
 double OMXPlayerAudio::GetDelay()
 {
   if(m_decoder)
@@ -473,7 +503,8 @@ double OMXPlayerAudio::GetDelay()
   else
     return 0;
 }
-
+//}}}
+//{{{
 double OMXPlayerAudio::GetCacheTime()
 {
   if(m_decoder)
@@ -481,7 +512,8 @@ double OMXPlayerAudio::GetCacheTime()
   else
     return 0;
 }
-
+//}}}
+//{{{
 double OMXPlayerAudio::GetCacheTotal()
 {
   if(m_decoder)
@@ -489,15 +521,18 @@ double OMXPlayerAudio::GetCacheTotal()
   else
     return 0;
 }
+//}}}
 
+//{{{
 void OMXPlayerAudio::SubmitEOS()
 {
   if(m_decoder)
     m_decoder->SubmitEOS();
 }
-
+//}}}
+//{{{
 bool OMXPlayerAudio::IsEOS()
 {
   return m_packets.empty() && (!m_decoder || m_decoder->IsEOS());
 }
-
+//}}}

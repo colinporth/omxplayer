@@ -57,7 +57,6 @@ extern "C" {
 #include "OMXPlayerVideo.h"
 #include "OMXPlayerAudio.h"
 #include "OMXPlayerSubtitles.h"
-#include "OMXControl.h"
 #include "DllOMX.h"
 
 #include "Srt.h"

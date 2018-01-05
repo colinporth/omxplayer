@@ -271,7 +271,7 @@ void CBitstreamConverter::parseh264_sps(uint8_t *sps, uint32_t sps_size, bool *i
 //}}}
 
 //{{{
-const uint8_t *CBitstreamConverter::avc_find_startcode_internal(const uint8_t *p, const uint8_t *end)
+const uint8_t* CBitstreamConverter::avc_find_startcode_internal(const uint8_t *p, const uint8_t *end)
 {
   const uint8_t *a = p + 4 - ((intptr_t)p & 3);
 
@@ -313,7 +313,7 @@ const uint8_t *CBitstreamConverter::avc_find_startcode_internal(const uint8_t *p
 }
 //}}}
 //{{{
-const uint8_t *CBitstreamConverter::avc_find_startcode(const uint8_t *p, const uint8_t *end)
+const uint8_t* CBitstreamConverter::avc_find_startcode(const uint8_t *p, const uint8_t *end)
 {
   const uint8_t *out= avc_find_startcode_internal(p, end);
   if (p<out && out<end && !out[-1])
@@ -706,7 +706,7 @@ bool CBitstreamConverter::Convert(uint8_t *pData, int iSize)
 //}}}
 
 //{{{
-uint8_t *CBitstreamConverter::GetConvertBuffer()
+uint8_t* CBitstreamConverter::GetConvertBuffer()
 {
   if((m_convert_bitstream || m_convert_bytestream || m_convert_3byteTo4byteNALSize) && m_convertBuffer != NULL)
     return m_convertBuffer;
@@ -724,7 +724,7 @@ int CBitstreamConverter::GetConvertSize()
 }
 //}}}
 //{{{
-uint8_t *CBitstreamConverter::GetExtraData()
+uint8_t* CBitstreamConverter::GetExtraData()
 {
   return m_extradata;
 }

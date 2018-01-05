@@ -147,59 +147,19 @@ void printSubtitleInfo() {
 //}}}
 
 //{{{
-void FlushStreams (double pts) {
+float getDisplayAspectRatio (HDMI_ASPECT_T aspect) {
 
-  m_av_clock->OMXStop();
-  m_av_clock->OMXPause();
-
-  if (m_has_video)
-    m_player_video.Flush();
-
-  if (m_has_audio)
-    m_player_audio.Flush();
-
-  if (pts != DVD_NOPTS_VALUE)
-    m_av_clock->OMXMediaTime(pts);
-
-  if (m_has_subtitle)
-    m_player_subtitles.Flush();
-
-  if(m_omx_pkt) {
-    m_omx_reader.FreePacket(m_omx_pkt);
-    m_omx_pkt = NULL;
+  switch (aspect) {
+    case HDMI_ASPECT_4_3:   return 4.f/ 3.f;
+    case HDMI_ASPECT_14_9:  return 14.f/ 9.f;
+    case HDMI_ASPECT_16_9:  return 16.f/ 9.f;
+    case HDMI_ASPECT_5_4:   return 5.f/ 4.f;
+    case HDMI_ASPECT_16_10: return 16.f/ 10.f;
+    case HDMI_ASPECT_15_9:  return 15.f/ 9.f;
+    case HDMI_ASPECT_64_27: return 64.f/ 27.f;
+    default:                return 16.f/ 9.f;
     }
   }
-//}}}
-
-//{{{
-float get_display_aspect_ratio (HDMI_ASPECT_T aspect)
-{
-  float display_aspect;
-  switch (aspect) {
-    case HDMI_ASPECT_4_3:   display_aspect = 4.0/3.0;   break;
-    case HDMI_ASPECT_14_9:  display_aspect = 14.0/9.0;  break;
-    case HDMI_ASPECT_16_9:  display_aspect = 16.0/9.0;  break;
-    case HDMI_ASPECT_5_4:   display_aspect = 5.0/4.0;   break;
-    case HDMI_ASPECT_16_10: display_aspect = 16.0/10.0; break;
-    case HDMI_ASPECT_15_9:  display_aspect = 15.0/9.0;  break;
-    case HDMI_ASPECT_64_27: display_aspect = 64.0/27.0; break;
-    default:                display_aspect = 16.0/9.0;  break;
-  }
-  return display_aspect;
-}
-//}}}
-//{{{
-float get_display_aspect_ratio (SDTV_ASPECT_T aspect)
-{
-  float display_aspect;
-  switch (aspect) {
-    case SDTV_ASPECT_4_3:  display_aspect = 4.0/3.0;  break;
-    case SDTV_ASPECT_14_9: display_aspect = 14.0/9.0; break;
-    case SDTV_ASPECT_16_9: display_aspect = 16.0/9.0; break;
-    default:               display_aspect = 4.0/3.0;  break;
-  }
-  return display_aspect;
-}
 //}}}
 //{{{
 void CallbackTvServiceCallback (void *userdata, uint32_t reason, uint32_t param1, uint32_t param2) {
@@ -298,7 +258,7 @@ void SetVideoMode (int width, int height, int fpsrate, int fpsscale) {
         score += (1<<16);
 
       // prefer square pixels modes
-      float par = get_display_aspect_ratio((HDMI_ASPECT_T)tv->aspect_ratio)*(float)tv->height/(float)tv->width;
+      float par = getDisplayAspectRatio ((HDMI_ASPECT_T)tv->aspect_ratio)*(float)tv->height/(float)tv->width;
       score += fabs(par - 1.0f) * (1<<12);
 
       /*printf("mode %dx%d@%d %s%s:%x par=%.2f score=%d\n", tv->width, tv->height,
@@ -440,7 +400,6 @@ int main (int argc, char* argv[]) {
   //{{{  vars
   bool m_send_eos            = false;
   bool m_seek_flush          = false;
-  bool m_chapter_seek        = false;
   string m_filename;
 
   double m_incr                = 0;
@@ -942,17 +901,10 @@ int main (int argc, char* argv[]) {
   //}}}
   //{{{  display aspect
   TV_DISPLAY_STATE_T current_tv_state;
-  memset(&current_tv_state, 0, sizeof(TV_DISPLAY_STATE_T));
-  m_BcmHost.vc_tv_get_display_state(&current_tv_state);
-
-  if (current_tv_state.state & (VC_HDMI_HDMI | VC_HDMI_DVI))
-    //  HDMI or DVI on
-    m_config_video.display_aspect = get_display_aspect_ratio ((HDMI_ASPECT_T)current_tv_state.display.hdmi.aspect_ratio);
-  else
-    //  composite on
-    m_config_video.display_aspect = get_display_aspect_ratio ((SDTV_ASPECT_T)current_tv_state.display.sdtv.display_options.aspect);
-
-  m_config_video.display_aspect *= (float)current_tv_state.display.hdmi.height/(float)current_tv_state.display.hdmi.width;
+  memset (&current_tv_state, 0, sizeof(TV_DISPLAY_STATE_T));
+  m_BcmHost.vc_tv_get_display_state (&current_tv_state);
+  m_config_video.display_aspect = getDisplayAspectRatio ((HDMI_ASPECT_T)current_tv_state.display.hdmi.aspect_ratio);
+  m_config_video.display_aspect *= (float)current_tv_state.display.hdmi.height / (float)current_tv_state.display.hdmi.width;
   //}}}
   if (m_orientation >= 0)
     m_config_video.hints.orientation = m_orientation;
@@ -1011,7 +963,7 @@ int main (int argc, char* argv[]) {
     m_threshold = m_config_audio.is_live ? 0.7f : 0.2f;
   //}}}
 
-  m_av_clock->OMXReset(m_has_video, m_has_audio);
+  m_av_clock->OMXReset (m_has_video, m_has_audio);
   m_av_clock->OMXStateExecute();
   sentStarted = true;
 
@@ -1022,7 +974,7 @@ int main (int argc, char* argv[]) {
 
     double now = m_av_clock->GetAbsoluteClock();
     bool update = false;
-    if (m_last_check_time == 0.0 ||
+    if (m_last_check_time == 0.f||
         m_last_check_time + DVD_MSEC_TO_TIME(20) <= now) {
       update = true;
       m_last_check_time = now;
@@ -1094,30 +1046,10 @@ int main (int argc, char* argv[]) {
 
         //{{{
         case KeyConfig::ACTION_PREVIOUS_CHAPTER:
-          if(m_omx_reader.GetChapterCount() > 0) {
-            m_omx_reader.SeekChapter(m_omx_reader.GetChapter() - 1, &startpts);
-            DISPLAY_TEXT_LONG(strprintf("Chapter %d", m_omx_reader.GetChapter()));
-            FlushStreams (startpts);
-            m_seek_flush = true;
-            m_chapter_seek = true;
-          }
-          else {
-            m_incr = -600.0;
-          }
           break;
         //}}}
         //{{{
         case KeyConfig::ACTION_NEXT_CHAPTER:
-          if(m_omx_reader.GetChapterCount() > 0) {
-            m_omx_reader.SeekChapter(m_omx_reader.GetChapter() + 1, &startpts);
-            DISPLAY_TEXT_LONG(strprintf("Chapter %d", m_omx_reader.GetChapter()));
-            FlushStreams (startpts);
-            m_seek_flush = true;
-            m_chapter_seek = true;
-          }
-          else {
-            m_incr = 600.0;
-          }
           break;
         //}}}
 
@@ -1377,7 +1309,6 @@ int main (int argc, char* argv[]) {
       continue;
       }
       //}}}
-
     if (m_seek_flush || m_incr != 0) {
       //{{{  seek
       double pts = 0;
@@ -1385,18 +1316,33 @@ int main (int argc, char* argv[]) {
       if (m_has_subtitle)
         m_player_subtitles.Pause();
 
-      if (!m_chapter_seek) {
-        pts = m_av_clock->OMXMediaTime();
-        seek_pos = (pts ? pts / DVD_TIME_BASE : last_seek_pos) + m_incr;
-        last_seek_pos = seek_pos;
-        seek_pos *= 1000.0;
-        if (m_omx_reader.SeekTime((int)seek_pos, m_incr < 0.0f, &startpts)) {
-          unsigned t = (unsigned)(startpts*1e-6);
-          auto dur = m_omx_reader.GetStreamLength() / 1000;
-          DISPLAY_TEXT_LONG (strprintf("Seek\n%02d:%02d:%02d / %02d:%02d:%02d",
-                             (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
-          printf ("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
-          FlushStreams (startpts);
+      pts = m_av_clock->OMXMediaTime();
+      seek_pos = (pts ? pts / DVD_TIME_BASE : last_seek_pos) + m_incr;
+      last_seek_pos = seek_pos;
+      seek_pos *= 1000.0;
+      if (m_omx_reader.SeekTime((int)seek_pos, m_incr < 0.0f, &startpts)) {
+        unsigned t = (unsigned)(startpts*1e-6);
+        auto dur = m_omx_reader.GetStreamLength() / 1000;
+
+        DISPLAY_TEXT_LONG (strprintf("Seek\n%02d:%02d:%02d / %02d:%02d:%02d",
+                           (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
+        printf ("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+
+        // flush
+        m_av_clock->OMXStop();
+        m_av_clock->OMXPause();
+
+        if (m_has_video)
+          m_player_video.Flush();
+        if (m_has_audio)
+          m_player_audio.Flush();
+        if (pts != DVD_NOPTS_VALUE)
+          m_av_clock->OMXMediaTime (startpts);
+        if (m_has_subtitle)
+          m_player_subtitles.Flush();
+        if (m_omx_pkt) {
+          m_omx_reader.FreePacket (m_omx_pkt);
+          m_omx_pkt = NULL;
           }
         }
 
@@ -1419,15 +1365,12 @@ int main (int argc, char* argv[]) {
       m_incr = 0;
       }
       //}}}
-
-    /* player got in an error state */
     if (m_player_audio.Error()) {
       //{{{  error, exit
       printf ("audio player error. emergency exit!!!\n");
       goto exit;
       }
       //}}}
-
     if (update) {
       //{{{  when the video/audio fifos are low, we pause clock, when high we resume
       double stamp = m_av_clock->OMXMediaTime();
@@ -1540,19 +1483,19 @@ int main (int argc, char* argv[]) {
       //}}}
 
     if (!sentStarted) {
+      //{{{  omx reset
       CLog::Log (LOGDEBUG, "COMXPlayer::HandleMessages - player started RESET");
       m_av_clock->OMXReset (m_has_video, m_has_audio);
       sentStarted = true;
       }
-
+      //}}}
     if (!m_omx_pkt)
       m_omx_pkt = m_omx_reader.Read();
-
     if (m_omx_pkt)
       m_send_eos = false;
 
     if (m_omx_reader.IsEof() && !m_omx_pkt) {
-      // demuxer EOF, but may have not played out data yet
+      //{{{  demuxer EOF, but may have not played out data yet
       if ((m_has_video && m_player_video.GetCached()) ||
           (m_has_audio && m_player_audio.GetCached()) ) {
         OMXClock::OMXSleep(10);
@@ -1565,7 +1508,7 @@ int main (int argc, char* argv[]) {
       m_send_eos = true;
       if ((m_has_video && !m_player_video.IsEOS()) ||
           (m_has_audio && !m_player_audio.IsEOS()) ) {
-        OMXClock::OMXSleep(10);
+        OMXClock::OMXSleep (10);
         continue;
         }
 
@@ -1576,34 +1519,35 @@ int main (int argc, char* argv[]) {
 
       break;
       }
+      //}}}
 
-    if (m_has_video && m_omx_pkt && m_omx_reader.IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index)) {
-      if (m_player_video.AddPacket(m_omx_pkt))
-        m_omx_pkt = NULL;
-      else
-        OMXClock::OMXSleep(10);
-      }
-    else if (m_has_audio && m_omx_pkt && m_omx_pkt->codec_type == AVMEDIA_TYPE_AUDIO) {
-      if (m_player_audio.AddPacket(m_omx_pkt))
-        m_omx_pkt = NULL;
-      else
-        OMXClock::OMXSleep(10);
-      }
-    else if (m_has_subtitle && m_omx_pkt && m_omx_pkt->codec_type == AVMEDIA_TYPE_SUBTITLE) {
-      auto result = m_player_subtitles.AddPacket(m_omx_pkt, m_omx_reader.GetRelativeIndex(m_omx_pkt->stream_index));
-      if (result)
-        m_omx_pkt = NULL;
-      else
-        OMXClock::OMXSleep(10);
-      }
-    else {
-      if (m_omx_pkt) {
+    if (m_omx_pkt) {
+      if (m_has_video && m_omx_reader.IsActive(OMXSTREAM_VIDEO, m_omx_pkt->stream_index)) {
+        if (m_player_video.AddPacket (m_omx_pkt))
+          m_omx_pkt = NULL;
+        else
+          OMXClock::OMXSleep (10);
+        }
+      else if (m_has_audio && m_omx_pkt->codec_type == AVMEDIA_TYPE_AUDIO) {
+        if (m_player_audio.AddPacket (m_omx_pkt))
+          m_omx_pkt = NULL;
+        else
+          OMXClock::OMXSleep (10);
+        }
+      else if (m_has_subtitle && m_omx_pkt->codec_type == AVMEDIA_TYPE_SUBTITLE) {
+        auto result = m_player_subtitles.AddPacket (m_omx_pkt, m_omx_reader.GetRelativeIndex(m_omx_pkt->stream_index));
+        if (result)
+          m_omx_pkt = NULL;
+        else
+          OMXClock::OMXSleep (10);
+        }
+      else {
         m_omx_reader.FreePacket (m_omx_pkt);
         m_omx_pkt = NULL;
         }
-      else
-        OMXClock::OMXSleep (10);
       }
+    else
+      OMXClock::OMXSleep (10);
     }
     //}}}
 
@@ -1616,7 +1560,8 @@ exit:
     vc_gencmd (response, sizeof response, "hvs_update_fields %d", 0);
     }
 
-  if (m_has_video && m_refresh && tv_state.display.hdmi.group && tv_state.display.hdmi.mode)
+  if (m_has_video && m_refresh &&
+      tv_state.display.hdmi.group && tv_state.display.hdmi.mode)
     m_BcmHost.vc_tv_hdmi_power_on_explicit_new (HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)tv_state.display.hdmi.group, tv_state.display.hdmi.mode);
 
   m_av_clock->OMXStop();
@@ -1628,7 +1573,7 @@ exit:
   m_keyboard->Close();
 
   if (m_omx_pkt) {
-    m_omx_reader.FreePacket(m_omx_pkt);
+    m_omx_reader.FreePacket (m_omx_pkt);
     m_omx_pkt = NULL;
     }
   m_omx_reader.Close();

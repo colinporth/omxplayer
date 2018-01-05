@@ -467,6 +467,9 @@ int main (int argc, char* argv[]) {
   string m_lavfdopts = "";
   string m_avdict = "";
 
+  float m_latency = 0.0f;
+  double m_last_check_time = 0.0;
+
   vector<Subtitle> external_subtitles;
   //}}}
   //{{{  const
@@ -513,12 +516,6 @@ int main (int argc, char* argv[]) {
   //}}}
 
   #define S(x) (int)(DVD_PLAYSPEED_NORMAL*(x))
-
-  float m_latency = 0.0f;
-  double m_last_check_time = 0.0;
-
-  int c;
-  string mode;
 
   //{{{  opt decoder
   //{{{
@@ -587,6 +584,7 @@ int main (int argc, char* argv[]) {
   };
   //}}}
 
+  int c;
   while ((c = getopt_long(argc, argv, "wiIhvkn:l:o:cslb::pd3:Myzt:rg", longopts, NULL)) != -1) {
     switch (c) {
       //{{{
@@ -995,6 +993,7 @@ int main (int argc, char* argv[]) {
   if ((m_config_audio.hints.codec == AV_CODEC_ID_AC3 || m_config_audio.hints.codec == AV_CODEC_ID_EAC3) &&
       m_BcmHost.vc_tv_hdmi_audio_supported (EDID_AudioFormat_eAC3, 2, EDID_AudioSampleRate_e44KHz, EDID_AudioSampleSize_16bit ) != 0)
     m_config_audio.passthrough = false;
+
   if (m_config_audio.hints.codec == AV_CODEC_ID_DTS &&
       m_BcmHost.vc_tv_hdmi_audio_supported (EDID_AudioFormat_eDTS, 2, EDID_AudioSampleRate_e44KHz, EDID_AudioSampleSize_16bit ) != 0)
     m_config_audio.passthrough = false;
@@ -1371,12 +1370,16 @@ int main (int argc, char* argv[]) {
         }
       //}}}
       }
+
     if (idle) {
+      //{{{  sleep for 10ms
       usleep(10000);
       continue;
       }
+      //}}}
 
     if (m_seek_flush || m_incr != 0) {
+      //{{{  seek
       double pts = 0;
       double seek_pos = 0;
       if (m_has_subtitle)
@@ -1415,62 +1418,79 @@ int main (int argc, char* argv[]) {
       m_seek_flush = false;
       m_incr = 0;
       }
+      //}}}
 
     /* player got in an error state */
-    if(m_player_audio.Error()) {
+    if (m_player_audio.Error()) {
+      //{{{  error, exit
       printf ("audio player error. emergency exit!!!\n");
       goto exit;
       }
+      //}}}
 
     if (update) {
-      /* when the video/audio fifos are low, we pause clock, when high we resume */
+      //{{{  when the video/audio fifos are low, we pause clock, when high we resume
       double stamp = m_av_clock->OMXMediaTime();
       double audio_pts = m_player_audio.GetCurrentPTS();
       double video_pts = m_player_video.GetCurrentPTS();
 
-      if (0 && m_av_clock->OMXIsPaused()) {
-        double old_stamp = stamp;
-        if (audio_pts != DVD_NOPTS_VALUE && (stamp == 0 || audio_pts < stamp))
-          stamp = audio_pts;
-        if (video_pts != DVD_NOPTS_VALUE && (stamp == 0 || video_pts < stamp))
-          stamp = video_pts;
-        if (old_stamp != stamp) {
-          m_av_clock->OMXMediaTime(stamp);
-          stamp = m_av_clock->OMXMediaTime();
-          }
-        }
-
       float audio_fifo = audio_pts == DVD_NOPTS_VALUE ? 0.0f : audio_pts / DVD_TIME_BASE - stamp * 1e-6;
       float video_fifo = video_pts == DVD_NOPTS_VALUE ? 0.0f : video_pts / DVD_TIME_BASE - stamp * 1e-6;
       float threshold = min(0.1f, (float)m_player_audio.GetCacheTotal() * 0.1f);
-      bool audio_fifo_low = false, video_fifo_low = false, audio_fifo_high = false, video_fifo_high = false;
 
-      DISPLAY_TEXT_SHORT (
-        strprintf ("M:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk",
-                  stamp,
-                  video_fifo, (m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())>>10, m_player_video.GetDecoderBufferSize()>>10,
-                  audio_fifo, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
-                  m_player_video.GetCached() >> 10, m_player_audio.GetCached() >> 10));
-
+      bool audio_fifo_low = false;
+      bool video_fifo_low = false;
+      bool audio_fifo_high = false;
+      bool video_fifo_high = false;
       if (audio_pts != DVD_NOPTS_VALUE) {
+        //{{{  audio fifo levels
         audio_fifo_low = m_has_audio && audio_fifo < threshold;
         audio_fifo_high = !m_has_audio || (audio_pts != DVD_NOPTS_VALUE && audio_fifo > m_threshold);
         }
+        //}}}
       if (video_pts != DVD_NOPTS_VALUE) {
+        //{{{  video fifo levels
         video_fifo_low = m_has_video && video_fifo < threshold;
         video_fifo_high = !m_has_video || (video_pts != DVD_NOPTS_VALUE && video_fifo > m_threshold);
         }
-      CLog::Log(LOGDEBUG, "Normal M:%.0f (A:%.0f V:%.0f) P:%d A:%.2f V:%.2f/T:%.2f (%d,%d,%d,%d) A:%d%% V:%d%% (%.2f,%.2f)\n", stamp, audio_pts, video_pts, m_av_clock->OMXIsPaused(),
-        audio_pts == DVD_NOPTS_VALUE ? 0.0:audio_fifo, video_pts == DVD_NOPTS_VALUE ? 0.0:video_fifo, m_threshold, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high,
-        m_player_audio.GetLevel(), m_player_video.GetLevel(), m_player_audio.GetDelay(), (float)m_player_audio.GetCacheTotal());
+        //}}}
 
-      // keep latency under control by adjusting clock (and so resampling audio)
+      //{{{  subtitle display
+      DISPLAY_TEXT_SHORT (
+        strprintf ("M:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk",
+                   stamp,
+                   video_fifo,
+                   (m_player_video.GetDecoderBufferSize() - m_player_video.GetDecoderFreeSpace())>>10,
+                   m_player_video.GetDecoderBufferSize() >> 10,
+                   audio_fifo,
+                    m_player_audio.GetDelay(),
+                   m_player_audio.GetCacheTotal(),
+                   m_player_video.GetCached() >> 10,
+                   m_player_audio.GetCached() >> 10));
+      //}}}
+      //{{{  log display
+      CLog::Log(LOGDEBUG, "Normal M:%.0f (A:%.0f V:%.0f) P:%d A:%.2f V:%.2f/T:%.2f (%d,%d,%d,%d) A:%d%% V:%d%% (%.2f,%.2f)\n", stamp, audio_pts, video_pts, m_av_clock->OMXIsPaused(),
+                           audio_pts == DVD_NOPTS_VALUE ? 0.0:audio_fifo,
+                           video_pts == DVD_NOPTS_VALUE ? 0.0:video_fifo,
+                           m_threshold,
+                           audio_fifo_low,
+                           video_fifo_low,
+                           audio_fifo_high,
+                           video_fifo_high,
+                           m_player_audio.GetLevel(),
+                           m_player_video.GetLevel(),
+                           m_player_audio.GetDelay(),
+                           (float)m_player_audio.GetCacheTotal());
+      //}}}
+
       if (m_config_audio.is_live) {
+        //{{{  keep latency under control by adjusting clock (and so resampling audio)
         float latency = DVD_NOPTS_VALUE;
         if (m_has_audio && audio_pts != DVD_NOPTS_VALUE)
           latency = audio_fifo;
         else if (!m_has_audio && m_has_video && video_pts != DVD_NOPTS_VALUE)
           latency = video_fifo;
+
         if (!m_Pause && latency != DVD_NOPTS_VALUE) {
           if (m_av_clock->OMXIsPaused()) {
             if (latency > m_threshold) {
@@ -1491,19 +1511,23 @@ int main (int argc, char* argv[]) {
             else if (m_latency > 1.1f*m_threshold)
               speed = 1.001f;
 
-            m_av_clock->OMXSetSpeed(S(speed));
-            m_av_clock->OMXSetSpeed(S(speed), true, true);
+            m_av_clock->OMXSetSpeed (S(speed));
+            m_av_clock->OMXSetSpeed (S(speed), true, true);
             CLog::Log (LOGDEBUG, "Live: %.2f (%.2f) S:%.3f T:%.2f\n", m_latency, latency, speed, m_threshold);
             }
           }
         }
+        //}}}
       else if(!m_Pause && (m_omx_reader.IsEof() || m_omx_pkt || (audio_fifo_high && video_fifo_high))) {
+        //{{{  resume
         if (m_av_clock->OMXIsPaused()) {
           CLog::Log (LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
           m_av_clock->OMXResume();
           }
         }
+        //}}}
       else if (m_Pause || audio_fifo_low || video_fifo_low) {
+        //{{{  pause
         if (!m_av_clock->OMXIsPaused()) {
           if (!m_Pause)
             m_threshold = min(2.0f*m_threshold, 16.0f);
@@ -1511,7 +1535,9 @@ int main (int argc, char* argv[]) {
           m_av_clock->OMXPause();
           }
         }
+        //}}}
       }
+      //}}}
 
     if (!sentStarted) {
       CLog::Log (LOGDEBUG, "COMXPlayer::HandleMessages - player started RESET");

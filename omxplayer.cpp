@@ -72,7 +72,7 @@ using namespace std;
 
 // when we repeatedly seek, rather than play continuously
 #define TRICKPLAY(speed) (speed < 0 || speed > 4 * DVD_PLAYSPEED_NORMAL)
-#define DISPLAY_TEXT(text, ms) if(m_osd) m_player_subtitles.DisplayText(text, ms)
+#define DISPLAY_TEXT(text, ms) m_player_subtitles.DisplayText(text, ms)
 #define DISPLAY_TEXT_SHORT(text) DISPLAY_TEXT(text, 1000)
 #define DISPLAY_TEXT_LONG(text) DISPLAY_TEXT(text, 2000)
 
@@ -84,7 +84,6 @@ long              m_Volume              = 0;
 long              m_Amplification       = 0;
 bool              m_NativeDeinterlace   = false;
 bool              m_HWDecode            = false;
-bool              m_osd                 = true;
 bool              m_no_keys             = false;
 string       m_external_subtitles_path;
 bool              m_has_external_subtitles = false;
@@ -120,8 +119,6 @@ bool              m_gen_log             = false;
 bool              m_loop                = false;
 //}}}
 
-enum { ERROR=-1, SUCCESS,ONEBYTE };
-
 //{{{
 void sig_handler (int s)
 {
@@ -139,15 +136,6 @@ void sig_handler (int s)
      m_keyboard->Close();
   }
   abort();
-}
-//}}}
-//{{{
-void printVersion()
-{
-  printf ("omxplayer - Commandline multimedia player for the Raspberry Pi\n");
-  printf ("        Build date: %s\n", VERSION_DATE);
-  printf ("        Version   : %s [%s]\n", VERSION_HASH, VERSION_BRANCH);
-  printf ("        Repository: %s\n", VERSION_REPO);
 }
 //}}}
 //{{{
@@ -493,7 +481,7 @@ int main (int argc, char* argv[]) {
   signal (SIGFPE, sig_handler);
   signal (SIGINT, sig_handler);
   //}}}
-  printVersion();
+  printf ("omxplayer - Commandline multimedia player for the Raspberry Pi %s\n", VERSION_DATE);
 
   //{{{  vars
   bool                  m_send_eos            = false;
@@ -742,7 +730,7 @@ int main (int argc, char* argv[]) {
             m_config_audio.device != "hdmi" &&
             m_config_audio.device != "both" &&
             m_config_audio.device != "alsa") {
-          printf("Bad argument for -%c: Output device must be `local', `hdmi', `both' or `alsa'\n", c);
+          printf ("Bad argument for -%c: Output device must be `local', `hdmi', `both' or `alsa'\n", c);
           return EXIT_FAILURE;
           }
 
@@ -775,11 +763,6 @@ int main (int argc, char* argv[]) {
           if(m_loop)
             m_loop_from = m_incr;
         }
-        break;
-      //}}}
-      //{{{
-      case no_osd_opt:
-        m_osd = false;
         break;
       //}}}
       //{{{
@@ -925,7 +908,7 @@ int main (int argc, char* argv[]) {
             break;
           }
         if (i == sizeof layouts/sizeof *layouts) {
-          printf("Wrong layout specified: %s\n", optarg);
+          printf ("Wrong layout specified: %s\n", optarg);
           return EXIT_FAILURE;
         }
         break;
@@ -1107,9 +1090,10 @@ int main (int argc, char* argv[]) {
   if (m_has_video && !m_player_video.Open (m_av_clock, m_config_video))
     goto do_exit;
   //{{{  subtitles
-  if (m_has_subtitle || m_osd) {
+  if (m_has_subtitle) {
     vector<Subtitle> external_subtitles;
-    if (m_has_external_subtitles && !ReadSrt(m_external_subtitles_path, external_subtitles)) {
+    if (m_has_external_subtitles && 
+       !ReadSrt(m_external_subtitles_path, external_subtitles)) {
       puts ("Unable to read the subtitle file.");
       goto do_exit;
       }
@@ -1199,14 +1183,14 @@ int main (int argc, char* argv[]) {
         case KeyConfig::ACTION_SHOW_INFO:
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_DECREASE_SPEED:
           if (playspeed_current < playspeed_slow_min || playspeed_current > playspeed_slow_max)
             playspeed_current = playspeed_slow_max-1;
           playspeed_current = max(playspeed_current-1, playspeed_slow_min);
           SetSpeed(playspeeds[playspeed_current]);
-          DISPLAY_TEXT_SHORT(
-            strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
+          DISPLAY_TEXT_SHORT(strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
           printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
           m_Pause = false;
           break;
@@ -1217,12 +1201,12 @@ int main (int argc, char* argv[]) {
             playspeed_current = playspeed_slow_max-1;
           playspeed_current = min(playspeed_current+1, playspeed_slow_max);
           SetSpeed(playspeeds[playspeed_current]);
-          DISPLAY_TEXT_SHORT(
-            strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
+          DISPLAY_TEXT_SHORT(strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
           printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
           m_Pause = false;
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_REWIND:
           if (playspeed_current >= playspeed_ff_min && playspeed_current <= playspeed_ff_max)
@@ -1235,12 +1219,12 @@ int main (int argc, char* argv[]) {
           else
             playspeed_current = max(playspeed_current-1, playspeed_rew_max);
           SetSpeed(playspeeds[playspeed_current]);
-          DISPLAY_TEXT_SHORT(
-            strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
+          DISPLAY_TEXT_SHORT(strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
           printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
           m_Pause = false;
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_FAST_FORWARD:
           if (playspeed_current >= playspeed_rew_max && playspeed_current <= playspeed_rew_min)
@@ -1253,8 +1237,7 @@ int main (int argc, char* argv[]) {
           else
             playspeed_current = min(playspeed_current+1, playspeed_ff_max);
           SetSpeed(playspeeds[playspeed_current]);
-          DISPLAY_TEXT_SHORT(
-            strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
+          DISPLAY_TEXT_SHORT(strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
           printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
           m_Pause = false;
           break;
@@ -1266,13 +1249,13 @@ int main (int argc, char* argv[]) {
           {
             auto t = (unsigned) (m_av_clock->OMXMediaTime()*1e-3);
             auto dur = m_omx_reader.GetStreamLength() / 1000;
-            DISPLAY_TEXT_SHORT(
-              strprintf("Step\n%02d:%02d:%02d.%03d / %02d:%02d:%02d",
+            DISPLAY_TEXT_SHORT(strprintf("Step\n%02d:%02d:%02d.%03d / %02d:%02d:%02d",
                 (t/3600000), (t/60000)%60, (t/1000)%60, t%1000,
                 (dur/3600), (dur/60)%60, dur%60));
           }
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_PREVIOUS_AUDIO:
           if(m_has_audio)
@@ -1281,8 +1264,7 @@ int main (int argc, char* argv[]) {
             if(new_index >= 0)
             {
               m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, new_index);
-              DISPLAY_TEXT_SHORT(
-                strprintf("Audio stream: %d", m_omx_reader.GetAudioIndex() + 1));
+              DISPLAY_TEXT_SHORT(strprintf("Audio stream: %d", m_omx_reader.GetAudioIndex() + 1));
             }
           }
           break;
@@ -1292,11 +1274,11 @@ int main (int argc, char* argv[]) {
           if(m_has_audio)
           {
             m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader.GetAudioIndex() + 1);
-            DISPLAY_TEXT_SHORT(
-              strprintf("Audio stream: %d", m_omx_reader.GetAudioIndex() + 1));
+            DISPLAY_TEXT_SHORT(strprintf("Audio stream: %d", m_omx_reader.GetAudioIndex() + 1));
           }
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_PREVIOUS_CHAPTER:
           if(m_omx_reader.GetChapterCount() > 0) {
@@ -1325,6 +1307,7 @@ int main (int argc, char* argv[]) {
           }
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_PREVIOUS_SUBTITLE:
           if(m_has_subtitle) {
@@ -1394,6 +1377,7 @@ int main (int argc, char* argv[]) {
           }
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_DECREASE_SUBTITLE_DELAY:
           if(m_has_subtitle && m_player_subtitles.GetVisible()) {
@@ -1414,12 +1398,14 @@ int main (int argc, char* argv[]) {
           }
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_EXIT:
           m_stop = true;
           goto do_exit;
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_SEEK_BACK_SMALL:
           if(m_omx_reader.CanSeek()) m_incr = -30.0;
@@ -1452,11 +1438,13 @@ int main (int argc, char* argv[]) {
             m_incr = newPos - oldPos;
             break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_SET_ALPHA:
             m_player_video.SetAlpha(result.getArg());
             break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_PLAY:
           m_Pause=false;
@@ -1502,6 +1490,7 @@ int main (int argc, char* argv[]) {
           }
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_MOVE_VIDEO:
           sscanf(result.getWinArg(), "%f %f %f %f", &m_config_video.dst_rect.x1, &m_config_video.dst_rect.y1, &m_config_video.dst_rect.x2, &m_config_video.dst_rect.y2);
@@ -1515,6 +1504,7 @@ int main (int argc, char* argv[]) {
           m_player_video.SetVideoRect(m_config_video.src_rect, m_config_video.dst_rect);
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_HIDE_VIDEO:
           // set alpha to minimum
@@ -1527,6 +1517,7 @@ int main (int argc, char* argv[]) {
           m_player_video.SetAlpha(255);
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_SET_ASPECT_MODE:
           if (result.getWinArg()) {
@@ -1542,6 +1533,7 @@ int main (int argc, char* argv[]) {
           }
           break;
         //}}}
+
         //{{{
         case KeyConfig::ACTION_DECREASE_VOLUME:
           m_Volume -= 300;
@@ -1661,10 +1653,17 @@ int main (int argc, char* argv[]) {
       float threshold = min(0.1f, (float)m_player_audio.GetCacheTotal() * 0.1f);
       bool audio_fifo_low = false, video_fifo_low = false, audio_fifo_high = false, video_fifo_high = false;
 
-      printf ("M:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk                            \r", stamp,
+      printf ("\rM:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk",
+              stamp,
               video_fifo, (m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())>>10, m_player_video.GetDecoderBufferSize()>>10,
               audio_fifo, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
-              m_player_video.GetCached()>>10, m_player_audio.GetCached()>>10);
+              m_player_video.GetCached() >> 10, m_player_audio.GetCached() >> 10);
+      DISPLAY_TEXT(
+        strprintf ("M:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk",
+                  stamp,
+                  video_fifo, (m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())>>10, m_player_video.GetDecoderBufferSize()>>10,
+                  audio_fifo, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
+                  m_player_video.GetCached() >> 10, m_player_audio.GetCached() >> 10), 1000);
 
       if (audio_pts != DVD_NOPTS_VALUE) {
         audio_fifo_low = m_has_audio && audio_fifo < threshold;

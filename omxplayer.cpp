@@ -90,7 +90,6 @@ bool              m_Pause               = false;
 OMXReader         m_omx_reader;
 int               m_audio_index_use     = 0;
 OMXClock          *m_av_clock           = NULL;
-OMXControl        m_omxcontrol;
 Keyboard          *m_keyboard           = NULL;
 OMXAudioConfig    m_config_audio;
 OMXVideoConfig    m_config_video;
@@ -842,8 +841,8 @@ int main (int argc, char* argv[]) {
   m_keyboard = new Keyboard();
   m_keyboard->setKeymap (keymap);
 
-  if (!m_omx_reader.Open (m_filename.c_str(), true, m_config_audio.is_live, m_timeout, 
-                          m_cookie.c_str(), m_user_agent.c_str(), 
+  if (!m_omx_reader.Open (m_filename.c_str(), true, m_config_audio.is_live, m_timeout,
+                          m_cookie.c_str(), m_user_agent.c_str(),
                           m_lavfdopts.c_str(), m_avdict.c_str()))
     goto exit;
 
@@ -963,10 +962,9 @@ int main (int argc, char* argv[]) {
         m_last_check_time + DVD_MSEC_TO_TIME(20) <= now) {
       update = true;
       m_last_check_time = now;
-      OMXControlResult result = (OMXControlResult)m_keyboard->getEvent();
-      double oldPos, newPos;
+      auto key = m_keyboard->getEvent();
       //{{{  action key
-      switch (result.getKey()) {
+      switch (key) {
         //{{{
         case KeyConfig::ACTION_SHOW_INFO:
           break;
@@ -1152,20 +1150,16 @@ int main (int argc, char* argv[]) {
         //}}}
         //{{{
         case KeyConfig::ACTION_SEEK_RELATIVE:
-            m_incr = result.getArg() * 1e-6;
+            m_incr = 1 * 1e-6;
             break;
         //}}}
         //{{{
         case KeyConfig::ACTION_SEEK_ABSOLUTE:
-            newPos = result.getArg() * 1e-6;
-            oldPos = m_av_clock->OMXMediaTime()*1e-6;
-            m_incr = newPos - oldPos;
             break;
         //}}}
 
         //{{{
         case KeyConfig::ACTION_SET_ALPHA:
-            m_player_video.SetAlpha(result.getArg());
             break;
         //}}}
 
@@ -1219,15 +1213,10 @@ int main (int argc, char* argv[]) {
 
         //{{{
         case KeyConfig::ACTION_MOVE_VIDEO:
-          sscanf(result.getWinArg(), "%f %f %f %f", &m_config_video.dst_rect.x1, &m_config_video.dst_rect.y1, &m_config_video.dst_rect.x2, &m_config_video.dst_rect.y2);
-          m_player_video.SetVideoRect(m_config_video.src_rect, m_config_video.dst_rect);
-          m_player_subtitles.SetSubtitleRect(m_config_video.dst_rect.x1, m_config_video.dst_rect.y1, m_config_video.dst_rect.x2, m_config_video.dst_rect.y2);
           break;
         //}}}
         //{{{
         case KeyConfig::ACTION_CROP_VIDEO:
-          sscanf(result.getWinArg(), "%f %f %f %f", &m_config_video.src_rect.x1, &m_config_video.src_rect.y1, &m_config_video.src_rect.x2, &m_config_video.src_rect.y2);
-          m_player_video.SetVideoRect(m_config_video.src_rect, m_config_video.dst_rect);
           break;
         //}}}
 
@@ -1246,17 +1235,6 @@ int main (int argc, char* argv[]) {
 
         //{{{
         case KeyConfig::ACTION_SET_ASPECT_MODE:
-          if (result.getWinArg()) {
-            if (!strcasecmp(result.getWinArg(), "letterbox"))
-              m_config_video.aspectMode = 1;
-            else if (!strcasecmp(result.getWinArg(), "fill"))
-              m_config_video.aspectMode = 2;
-            else if (!strcasecmp(result.getWinArg(), "stretch"))
-              m_config_video.aspectMode = 3;
-            else
-              m_config_video.aspectMode = 0;
-            m_player_video.SetVideoRect(m_config_video.aspectMode);
-          }
           break;
         //}}}
 

@@ -60,7 +60,6 @@ SRC=        linux/XMemUtils.cpp \
 	    Unicode.cpp \
 	    Srt.cpp \
 	    KeyConfig.cpp \
-	    OMXControl.cpp \
 	    Keyboard.cpp \
 	    omxplayer.cpp \
 

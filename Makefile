@@ -73,7 +73,7 @@ all: omxplayer
 	$(CXX) $(CFLAGS) $(INCLUDES) -c $< -o $@ -Wno-deprecated-declarations
 
 version:
-	bash gen_version.sh > version.h
+#        bash gen_version.sh > version.h
 
 omxplayer: version $(OBJS)
 	$(CXX) $(LDFLAGS) -o omxplayer $(OBJS)

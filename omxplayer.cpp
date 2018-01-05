@@ -78,7 +78,7 @@ using namespace std;
 
 typedef enum { CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB, CONF_FLAGS_FORMAT_FP } FORMAT_3D_T;
 
-const float kFontSize = 0.03f;
+const float kFontSize = 0.04f;
 const string kFontPath = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
 const string kItalicFontPath = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
 

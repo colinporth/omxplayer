@@ -151,7 +151,6 @@ void printSubtitleInfo() {
   }
 //}}}
 
-void FlushStreams (double pts);
 //{{{
 void FlushStreams (double pts) {
 
@@ -176,22 +175,7 @@ void FlushStreams (double pts) {
     }
   }
 //}}}
-//{{{
-void SetSpeed (int iSpeed) {
 
-  if (!m_av_clock)
-    return;
-
-  m_omx_reader.SetSpeed (iSpeed);
-
-  // flush when in trickplay mode
-  if (TRICKPLAY(iSpeed) || TRICKPLAY(m_av_clock->OMXPlaySpeed()))
-    FlushStreams (DVD_NOPTS_VALUE);
-
-  m_av_clock->OMXSetSpeed (iSpeed);
-  m_av_clock->OMXSetSpeed (iSpeed, true, true);
-  }
-//}}}
 //{{{
 float get_display_aspect_ratio (HDMI_ASPECT_T aspect)
 {
@@ -1335,12 +1319,14 @@ int main (int argc, char* argv[]) {
         //{{{
         case KeyConfig::ACTION_PLAYPAUSE:
           m_Pause = !m_Pause;
-          if (m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_NORMAL && 
+          if (m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_NORMAL &&
               m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_PAUSE) {
             printf("resume\n");
-            SetSpeed(1.0f);
+            m_omx_reader.SetSpeed (1.0f);
+            m_av_clock->OMXSetSpeed (1.0f);
+            m_av_clock->OMXSetSpeed (1.0f, true, true);
             m_seek_flush = true;
-          }
+            }
           if(m_Pause) {
             if(m_has_subtitle)
               m_player_subtitles.Pause();

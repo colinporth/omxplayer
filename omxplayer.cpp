@@ -72,28 +72,25 @@ using namespace std;
 
 // when we repeatedly seek, rather than play continuously
 #define TRICKPLAY(speed) (speed < 0 || speed > 4 * DVD_PLAYSPEED_NORMAL)
-#define DISPLAY_TEXT(text, ms) m_player_subtitles.DisplayText(text, ms)
-#define DISPLAY_TEXT_SHORT(text) DISPLAY_TEXT(text, 1000)
-#define DISPLAY_TEXT_LONG(text) DISPLAY_TEXT(text, 2000)
+
+#define DISPLAY_TEXT_SHORT(text) m_player_subtitles.DisplayText(text, 1000)
+#define DISPLAY_TEXT_LONG(text) m_player_subtitles.DisplayText(text, 2000)
 
 typedef enum { CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB, CONF_FLAGS_FORMAT_FP } FORMAT_3D_T;
+const string m_font_path = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
+const string m_italic_font_path = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
+const float m_font_size = 0.04f;
+
 //{{{  vars
+string m_dbus_name        = "org.mpris.MediaPlayer2.omxplayer";
+
 enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
 long              m_Volume              = 0;
 long              m_Amplification       = 0;
 bool              m_NativeDeinterlace   = false;
 bool              m_HWDecode            = false;
-bool              m_no_keys             = false;
-string       m_font_path           = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
-string       m_italic_font_path    = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
-string       m_dbus_name           = "org.mpris.MediaPlayer2.omxplayer";
-bool              m_asked_for_font      = false;
-bool              m_asked_for_italic_font = false;
-float             m_font_size           = 0.055f;
-bool              m_centered            = false;
-bool              m_ghost_box           = true;
-unsigned int      m_subtitle_lines      = 3;
+
 bool              m_Pause               = false;
 OMXReader         m_omx_reader;
 int               m_audio_index_use     = 0;
@@ -110,6 +107,7 @@ DllBcmHost        m_BcmHost;
 OMXPlayerVideo    m_player_video;
 OMXPlayerAudio    m_player_audio;
 OMXPlayerSubtitles  m_player_subtitles;
+
 bool              m_has_video           = false;
 bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
@@ -761,42 +759,6 @@ int main (int argc, char* argv[]) {
         break;
       //}}}
       //{{{
-      case font_opt:
-        m_font_path = optarg;
-        m_asked_for_font = true;
-        break;
-      //}}}
-      //{{{
-      case italic_font_opt:
-        m_italic_font_path = optarg;
-        m_asked_for_italic_font = true;
-        break;
-      //}}}
-      //{{{
-      case font_size_opt:
-        {
-          const int thousands = atoi(optarg);
-          if (thousands > 0)
-            m_font_size = thousands*0.001f;
-        }
-        break;
-      //}}}
-      //{{{
-      case align_opt:
-        m_centered = !strcmp(optarg, "center");
-        break;
-      //}}}
-      //{{{
-      case no_ghost_box_opt:
-        m_ghost_box = false;
-        break;
-      //}}}
-      //{{{
-      case lines_opt:
-        m_subtitle_lines = max(atoi(optarg), 1);
-        break;
-      //}}}
-      //{{{
       case pos_opt:
         sscanf(optarg, "%f %f %f %f", &m_config_video.dst_rect.x1, &m_config_video.dst_rect.y1, &m_config_video.dst_rect.x2, &m_config_video.dst_rect.y2) == 4 ||
         sscanf(optarg, "%f,%f,%f,%f", &m_config_video.dst_rect.x1, &m_config_video.dst_rect.y1, &m_config_video.dst_rect.x2, &m_config_video.dst_rect.y2);
@@ -904,11 +866,6 @@ int main (int argc, char* argv[]) {
       }
       //}}}
       //{{{
-      case dbus_name_opt:
-        m_dbus_name = optarg;
-        break;
-      //}}}
-      //{{{
       case loop_opt:
         if(m_incr != 0)
             m_loop_from = m_incr;
@@ -992,7 +949,8 @@ int main (int argc, char* argv[]) {
   blankBackground (true);
 
   m_av_clock = new OMXClock();
-  int control_err = m_omxcontrol.init (m_av_clock, &m_player_audio, &m_player_subtitles, &m_omx_reader, m_dbus_name);
+  int control_err = m_omxcontrol.init (m_av_clock, &m_player_audio, &m_player_subtitles,
+                                       &m_omx_reader, m_dbus_name);
 
   map<int,int> keymap = KeyConfig::buildDefaultKeymap();
   m_keyboard = new Keyboard();
@@ -1062,7 +1020,7 @@ int main (int argc, char* argv[]) {
   if (!m_player_subtitles.Open (m_omx_reader.SubtitleStreamCount(),
                                 move(external_subtitles),
                                 m_font_path, m_italic_font_path, m_font_size,
-                                m_centered, m_ghost_box, m_subtitle_lines,
+                                false, true, 3,
                                 m_config_video.display, m_config_video.layer + 1, m_av_clock))
     goto do_exit;
 
@@ -1071,7 +1029,7 @@ int main (int argc, char* argv[]) {
                                           m_config_video.dst_rect.x2, m_config_video.dst_rect.y2);
 
   if (m_has_subtitle) {
-    if (m_subtitle_index != -1) 
+    if (m_subtitle_index != -1)
       m_player_subtitles.SetActiveStream (min (m_subtitle_index, m_omx_reader.SubtitleStreamCount()-1));
     m_player_subtitles.SetUseExternalSubtitles (false);
     m_player_subtitles.SetVisible (true);
@@ -1604,17 +1562,12 @@ int main (int argc, char* argv[]) {
       float threshold = min(0.1f, (float)m_player_audio.GetCacheTotal() * 0.1f);
       bool audio_fifo_low = false, video_fifo_low = false, audio_fifo_high = false, video_fifo_high = false;
 
-      printf ("\rM:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk",
-              stamp,
-              video_fifo, (m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())>>10, m_player_video.GetDecoderBufferSize()>>10,
-              audio_fifo, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
-              m_player_video.GetCached() >> 10, m_player_audio.GetCached() >> 10);
-      DISPLAY_TEXT(
+      DISPLAY_TEXT_SHORT (
         strprintf ("M:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk",
                   stamp,
                   video_fifo, (m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())>>10, m_player_video.GetDecoderBufferSize()>>10,
                   audio_fifo, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
-                  m_player_video.GetCached() >> 10, m_player_audio.GetCached() >> 10), 1000);
+                  m_player_video.GetCached() >> 10, m_player_audio.GetCached() >> 10));
 
       if (audio_pts != DVD_NOPTS_VALUE) {
         audio_fifo_low = m_has_audio && audio_fifo < threshold;

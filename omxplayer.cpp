@@ -77,8 +77,6 @@ using namespace std;
 const float kFontSize = 0.035f;
 const string kFontPath = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
 const string kItalicFontPath = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
-
-typedef enum { CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB, CONF_FLAGS_FORMAT_FP } FORMAT_3D_T;
 //}}}
 //{{{  vars
 string m_dbus_name        = "org.mpris.MediaPlayer2.omxplayer";
@@ -230,7 +228,7 @@ void CallbackTvServiceCallback (void *userdata, uint32_t reason, uint32_t param1
   }
 //}}}
 //{{{
-void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T is3d) {
+void SetVideoMode (int width, int height, int fpsrate, int fpsscale) {
 
   int32_t num_modes = 0;
   int i;
@@ -299,14 +297,6 @@ void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T
       if (scan_mode != tv->scan_mode)
         score += (1<<16);
 
-      // wanting 3D but not getting it is a negative
-      if (is3d == CONF_FLAGS_FORMAT_SBS && !(tv->struct_3d_mask & HDMI_3D_STRUCT_SIDE_BY_SIDE_HALF_HORIZONTAL))
-        score += 1<<18;
-      if (is3d == CONF_FLAGS_FORMAT_TB  && !(tv->struct_3d_mask & HDMI_3D_STRUCT_TOP_AND_BOTTOM))
-        score += 1<<18;
-      if (is3d == CONF_FLAGS_FORMAT_FP  && !(tv->struct_3d_mask & HDMI_3D_STRUCT_FRAME_PACKING))
-        score += 1<<18;
-
       // prefer square pixels modes
       float par = get_display_aspect_ratio((HDMI_ASPECT_T)tv->aspect_ratio)*(float)tv->height/(float)tv->width;
       score += fabs(par - 1.0f) * (1<<12);
@@ -339,30 +329,16 @@ void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T
     property.param1 = ntsc_freq ? HDMI_PIXEL_CLOCK_TYPE_NTSC : HDMI_PIXEL_CLOCK_TYPE_PAL;
     property.param2 = 0;
 
-    /* inform TV of any 3D settings. Note this property just applies to next hdmi mode change, so no need to call for 2D modes */
-    property.property = HDMI_PROPERTY_3D_STRUCTURE;
-    property.param1 = HDMI_3D_FORMAT_NONE;
-    property.param2 = 0;
-    if (is3d != CONF_FLAGS_FORMAT_NONE) {
-      if (is3d == CONF_FLAGS_FORMAT_SBS && tv_found->struct_3d_mask & HDMI_3D_STRUCT_SIDE_BY_SIDE_HALF_HORIZONTAL)
-        property.param1 = HDMI_3D_FORMAT_SBS_HALF;
-      else if (is3d == CONF_FLAGS_FORMAT_TB && tv_found->struct_3d_mask & HDMI_3D_STRUCT_TOP_AND_BOTTOM)
-        property.param1 = HDMI_3D_FORMAT_TB_HALF;
-      else if (is3d == CONF_FLAGS_FORMAT_FP && tv_found->struct_3d_mask & HDMI_3D_STRUCT_FRAME_PACKING)
-        property.param1 = HDMI_3D_FORMAT_FRAME_PACKING;
-      m_BcmHost.vc_tv_hdmi_set_property(&property);
-      }
-
     printf("ntsc_freq:%d %s\n", ntsc_freq, property.param1 == HDMI_3D_FORMAT_SBS_HALF ? "3DSBS" :
             property.param1 == HDMI_3D_FORMAT_TB_HALF ? "3DTB" : property.param1 == HDMI_3D_FORMAT_FRAME_PACKING ? "3DFP":"");
     sem_t tv_synced;
-    sem_init(&tv_synced, 0, 0);
-    m_BcmHost.vc_tv_register_callback(CallbackTvServiceCallback, &tv_synced);
-    int success = m_BcmHost.vc_tv_hdmi_power_on_explicit_new(HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)group, tv_found->code);
+    sem_init (&tv_synced, 0, 0);
+    m_BcmHost.vc_tv_register_callback (CallbackTvServiceCallback, &tv_synced);
+    int success = m_BcmHost.vc_tv_hdmi_power_on_explicit_new (HDMI_MODE_HDMI, (HDMI_RES_GROUP_T)group, tv_found->code);
     if (success == 0)
-      sem_wait(&tv_synced);
-    m_BcmHost.vc_tv_unregister_callback(CallbackTvServiceCallback);
-    sem_destroy(&tv_synced);
+      sem_wait (&tv_synced);
+    m_BcmHost.vc_tv_unregister_callback (CallbackTvServiceCallback);
+    sem_destroy (&tv_synced);
     }
     //}}}
 
@@ -473,24 +449,23 @@ int main (int argc, char* argv[]) {
   CRBP      g_RBP;
   COMXCore  g_OMX;
 
-  FORMAT_3D_T  m_3d                  = CONF_FLAGS_FORMAT_NONE;
-  bool         m_refresh             = false;
-  double       startpts              = 0;
+  double startpts = 0;
+  bool m_refresh = false;
 
   bool sentStarted = false;
   float m_threshold = -1.0f; // amount of audio/video required to come out of buffering
-  float m_timeout   = 10.0f; // amount of time file/network operation can stall for before timing out
+  float m_timeout = 10.0f; // amount of time file/network operation can stall for before timing out
   int m_orientation = -1; // unset
-  float m_fps       = 0.0f; // unset
+  float m_fps = 0.0f; // unset
 
-  TV_DISPLAY_STATE_T   tv_state;
+  TV_DISPLAY_STATE_T tv_state;
   double last_seek_pos = 0;
   bool idle = false;
 
-  string m_cookie     = "";
+  string m_cookie = "";
   string m_user_agent = "";
-  string m_lavfdopts  = "";
-  string m_avdict     = "";
+  string m_lavfdopts = "";
+  string m_avdict = "";
 
   vector<Subtitle> external_subtitles;
   //}}}
@@ -539,8 +514,8 @@ int main (int argc, char* argv[]) {
 
   #define S(x) (int)(DVD_PLAYSPEED_NORMAL*(x))
 
-  double m_last_check_time = 0.0;
   float m_latency = 0.0f;
+  double m_last_check_time = 0.0;
 
   int c;
   string mode;
@@ -632,21 +607,6 @@ int main (int argc, char* argv[]) {
       //{{{
       case 'z':
         m_no_hdmi_clock_sync = true;
-        break;
-      //}}}
-      //{{{
-      case '3':
-        mode = optarg;
-        if(mode != "SBS" && mode != "TB" && mode != "FP") {
-          return 0;
-        }
-        if(mode == "TB")
-          m_3d = CONF_FLAGS_FORMAT_TB;
-        else if(mode == "FP")
-          m_3d = CONF_FLAGS_FORMAT_FP;
-        else
-          m_3d = CONF_FLAGS_FORMAT_SBS;
-        m_config_video.allow_mvc = true;
         break;
       //}}}
       //{{{
@@ -950,8 +910,7 @@ int main (int argc, char* argv[]) {
   m_has_subtitle  = m_omx_reader.SubtitleStreamCount();
   m_loop = m_loop && m_omx_reader.CanSeek();
 
-  // 3d modes don't work without switch hdmi mode
-  if (m_3d != CONF_FLAGS_FORMAT_NONE || m_NativeDeinterlace)
+  if (m_NativeDeinterlace)
     m_refresh = true;
 
   // you really don't want want to match refresh rate without hdmi clock sync
@@ -980,7 +939,7 @@ int main (int argc, char* argv[]) {
     memset (&tv_state, 0, sizeof(TV_DISPLAY_STATE_T));
     m_BcmHost.vc_tv_get_display_state (&tv_state);
     SetVideoMode (m_config_video.hints.width, m_config_video.hints.height,
-                  m_config_video.hints.fpsrate, m_config_video.hints.fpsscale, m_3d);
+                  m_config_video.hints.fpsrate, m_config_video.hints.fpsscale);
     }
   //}}}
   //{{{  display aspect

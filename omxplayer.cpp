@@ -18,8 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 //}}}
-//{{{
-
+//{{{  includes
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -30,12 +29,15 @@
 #include <getopt.h>
 #include <string.h>
 
+#include <string>
+#include <utility>
+
 #define AV_NOWARN_DEPRECATED
 
 extern "C" {
-#include <libavformat/avformat.h>
-#include <libavutil/avutil.h>
-};
+  #include <libavformat/avformat.h>
+  #include <libavutil/avutil.h>
+  };
 
 #include "OMXStreamInfo.h"
 
@@ -57,13 +59,11 @@ extern "C" {
 #include "OMXPlayerSubtitles.h"
 #include "OMXControl.h"
 #include "DllOMX.h"
+
 #include "Srt.h"
 #include "KeyConfig.h"
 #include "utils/Strprintf.h"
 #include "Keyboard.h"
-
-#include <string>
-#include <utility>
 
 #include "version.h"
 
@@ -76,7 +76,7 @@ using namespace std;
 #define DISPLAY_TEXT_SHORT(text) DISPLAY_TEXT(text, 1000)
 #define DISPLAY_TEXT_LONG(text) DISPLAY_TEXT(text, 2000)
 
-typedef enum {CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB, CONF_FLAGS_FORMAT_FP } FORMAT_3D_T;
+typedef enum { CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB, CONF_FLAGS_FORMAT_FP } FORMAT_3D_T;
 //{{{  vars
 enum PCMChannels  *m_pChannelMap        = NULL;
 volatile sig_atomic_t g_abort           = false;
@@ -113,7 +113,6 @@ DllBcmHost        m_BcmHost;
 OMXPlayerVideo    m_player_video;
 OMXPlayerAudio    m_player_audio;
 OMXPlayerSubtitles  m_player_subtitles;
-int               m_tv_show_info        = 0;
 bool              m_has_video           = false;
 bool              m_has_audio           = false;
 bool              m_has_subtitle        = false;
@@ -121,7 +120,7 @@ bool              m_gen_log             = false;
 bool              m_loop                = false;
 //}}}
 
-enum{ERROR=-1,SUCCESS,ONEBYTE};
+enum { ERROR=-1, SUCCESS,ONEBYTE };
 
 //{{{
 void sig_handler (int s)
@@ -266,10 +265,11 @@ void CallbackTvServiceCallback (void *userdata, uint32_t reason, uint32_t param1
   }
 //}}}
 //{{{
-void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T is3d)
-{
+void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T is3d) {
+
   int32_t num_modes = 0;
   int i;
+
   HDMI_RES_GROUP_T prefer_group;
   HDMI_RES_GROUP_T group = HDMI_RES_GROUP_CEA;
   float fps = 60.0f; // better to force to higher rate if no information is known
@@ -280,26 +280,23 @@ void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T
 
   //Supported HDMI CEA/DMT resolutions, preferred resolution will be returned
   TV_SUPPORTED_MODE_NEW_T *supported_modes = NULL;
+
   // query the number of modes first
   int max_supported_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes_new(group, NULL, 0, &prefer_group, &prefer_mode);
-
   if (max_supported_modes > 0)
     supported_modes = new TV_SUPPORTED_MODE_NEW_T[max_supported_modes];
-
-  if (supported_modes)
-  {
+  if (supported_modes) {
     num_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes_new(group,
         supported_modes, max_supported_modes, &prefer_group, &prefer_mode);
-
-    if(m_gen_log) {
-    CLog::Log(LOGDEBUG, "EGL get supported modes (%d) = %d, prefer_group=%x, prefer_mode=%x\n",
-        group, num_modes, prefer_group, prefer_mode);
+    if (m_gen_log) {
+      CLog::Log(LOGDEBUG, "EGL get supported modes (%d) = %d, prefer_group=%x, prefer_mode=%x\n",
+                group, num_modes, prefer_group, prefer_mode);
+      }
     }
-  }
 
   TV_SUPPORTED_MODE_NEW_T *tv_found = NULL;
-
   if (num_modes > 0 && prefer_group != HDMI_RES_GROUP_INVALID) {
+    //{{{  score modes
     uint32_t best_score = 1<<30;
     uint32_t scan_mode = m_NativeDeinterlace;
 
@@ -312,21 +309,21 @@ void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T
 
       /* Check if frame rate match (equal or exact multiple) */
       if(fabs(r - 1.0f*fps) / fps < 0.002f)
-  score += 0;
+        score += 0;
       else if(fabs(r - 2.0f*fps) / fps < 0.002f)
-  score += 1<<8;
+        score += 1<<8;
       else
-  score += (1<<16) + (1<<20)/r; // bad - but prefer higher framerate
+        score += (1<<16) + (1<<20)/r; // bad - but prefer higher framerate
 
       /* Check size too, only choose, bigger resolutions */
-      if(width && height) {
+      if (width && height) {
         /* cost of too small a resolution is high */
         score += max((int)(width -w), 0) * (1<<16);
         score += max((int)(height-h), 0) * (1<<16);
         /* cost of too high a resolution is lower */
         score += max((int)(w-width ), 0) * (1<<4);
         score += max((int)(h-height), 0) * (1<<4);
-      }
+        }
 
       // native is good
       if (!tv->native)
@@ -350,15 +347,16 @@ void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T
 
       /*printf("mode %dx%d@%d %s%s:%x par=%.2f score=%d\n", tv->width, tv->height,
              tv->frame_rate, tv->native?"N":"", tv->scan_mode?"I":"", tv->code, par, score);*/
-
       if (score < best_score) {
         tv_found = tv;
         best_score = score;
+        }
       }
     }
-  }
+    //}}}
 
-  if(tv_found) {
+  if (tv_found) {
+    //{{{  set mode
     char response[80];
     printf("Output mode %d: %dx%d@%d %s%s:%x\n", tv_found->code, tv_found->width, tv_found->height,
            tv_found->frame_rate, tv_found->native?"N":"", tv_found->scan_mode?"I":"", tv_found->code);
@@ -387,7 +385,7 @@ void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T
       else if (is3d == CONF_FLAGS_FORMAT_FP && tv_found->struct_3d_mask & HDMI_3D_STRUCT_FRAME_PACKING)
         property.param1 = HDMI_3D_FORMAT_FRAME_PACKING;
       m_BcmHost.vc_tv_hdmi_set_property(&property);
-    }
+      }
 
     printf("ntsc_freq:%d %s\n", ntsc_freq, property.param1 == HDMI_3D_FORMAT_SBS_HALF ? "3DSBS" :
             property.param1 == HDMI_3D_FORMAT_TB_HALF ? "3DTB" : property.param1 == HDMI_3D_FORMAT_FRAME_PACKING ? "3DFP":"");
@@ -400,6 +398,7 @@ void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T
     m_BcmHost.vc_tv_unregister_callback(CallbackTvServiceCallback);
     sem_destroy(&tv_synced);
     }
+    //}}}
 
   if (supported_modes)
     delete[] supported_modes;
@@ -407,35 +406,35 @@ void SetVideoMode (int width, int height, int fpsrate, int fpsscale, FORMAT_3D_T
 //}}}
 
 //{{{
-bool Exists (const string& path)
-{
+bool Exists (const string& path) {
+
   struct stat buf;
   auto error = stat(path.c_str(), &buf);
   return !error || errno != ENOENT;
-}
+  }
 //}}}
 //{{{
-bool IsURL (const string& str)
-{
+bool IsURL (const string& str) {
+
   auto result = str.find("://");
-  if(result == string::npos || result == 0)
+  if (result == string::npos || result == 0)
     return false;
 
-  for(size_t i = 0; i < result; ++i)
-  {
-    if(!isalpha(str[i]))
+  for (size_t i = 0; i < result; ++i)
+    if (!isalpha(str[i]))
       return false;
-  }
+
   return true;
-}
+  }
 //}}}
 //{{{
-bool IsPipe (const string& str)
-{
+bool IsPipe (const string& str) {
+
   if (str.compare(0, 5, "pipe:") == 0)
     return true;
+
   return false;
-}
+  }
 //}}}
 
 //{{{
@@ -450,36 +449,38 @@ void blankBackground (uint32_t rgba) {
   DISPMANX_UPDATE_HANDLE_T    update;
   DISPMANX_RESOURCE_HANDLE_T  resource;
   DISPMANX_ELEMENT_HANDLE_T   element;
-  int             ret;
+
+  int ret;
   uint32_t vc_image_ptr;
   VC_IMAGE_TYPE_T type = VC_IMAGE_ARGB8888;
-  int             layer = m_config_video.layer - 1;
+  int layer = m_config_video.layer - 1;
 
   VC_RECT_T dst_rect, src_rect;
 
-  display = vc_dispmanx_display_open(m_config_video.display);
+  display = vc_dispmanx_display_open (m_config_video.display);
   assert(display);
 
-  resource = vc_dispmanx_resource_create( type, 1 /*width*/, 1 /*height*/, &vc_image_ptr );
-  assert( resource );
+  resource = vc_dispmanx_resource_create (type, 1 /*width*/, 1 /*height*/, &vc_image_ptr );
+  assert (resource);
 
-  vc_dispmanx_rect_set( &dst_rect, 0, 0, 1, 1);
+  vc_dispmanx_rect_set (&dst_rect, 0, 0, 1, 1);
 
-  ret = vc_dispmanx_resource_write_data( resource, type, sizeof(rgba), &rgba, &dst_rect );
+  ret = vc_dispmanx_resource_write_data (resource, type, sizeof(rgba), &rgba, &dst_rect );
   assert(ret == 0);
 
-  vc_dispmanx_rect_set( &src_rect, 0, 0, 1<<16, 1<<16);
-  vc_dispmanx_rect_set( &dst_rect, 0, 0, 0, 0);
+  vc_dispmanx_rect_set (&src_rect, 0, 0, 1<<16, 1<<16);
+  vc_dispmanx_rect_set (&dst_rect, 0, 0, 0, 0);
 
   update = vc_dispmanx_update_start(0);
-  assert(update);
+  assert (update);
 
-  element = vc_dispmanx_element_add(update, display, layer, &dst_rect, resource, &src_rect,
-                                    DISPMANX_PROTECTION_NONE, NULL, NULL, DISPMANX_STEREOSCOPIC_MONO );
-  assert(element);
+  element = vc_dispmanx_element_add (update, display, layer, &dst_rect, resource, &src_rect,
+                                     DISPMANX_PROTECTION_NONE, NULL, NULL,
+                                     DISPMANX_STEREOSCOPIC_MONO );
+  assert (element);
 
   ret = vc_dispmanx_update_submit_sync( update );
-  assert( ret == 0 );
+  assert (ret == 0);
 }
 //}}}
 
@@ -507,7 +508,6 @@ int main (int argc, char* argv[]) {
   CRBP                  g_RBP;
   COMXCore              g_OMX;
 
-  bool                  m_stats               = false;
   FORMAT_3D_T           m_3d                  = CONF_FLAGS_FORMAT_NONE;
   bool                  m_refresh             = false;
   double                startpts              = 0;
@@ -722,11 +722,6 @@ int main (int argc, char* argv[]) {
       //{{{
       case 'p':
         m_config_audio.passthrough = true;
-        break;
-      //}}}
-      //{{{
-      case 's':
-        m_stats = true;
         break;
       //}}}
       //{{{
@@ -1031,19 +1026,6 @@ int main (int argc, char* argv[]) {
       }
     }
   //}}}
-  //{{{  check extension
-  bool m_audio_extension = false;
-  const CStdString m_musicExtensions =
-    ".nsv|.m4a|.flac|.aac|.strm|.pls|.rm|.rma|.mpa|.wav|.wma|.ogg|.mp3|.mp2|.m3u|.mod|.amf|.669|.dmf|.dsm|.far|.gdm|"
-    ".imf|.it|.m15|.med|.okt|.s3m|.stm|.sfx|.ult|.uni|.xm|.sid|.ac3|.dts|.cue|.aif|.aiff|.wpl|.ape|.mac|.mpc|.mp+|.mpp|.shn|.zip|.rar|"
-    ".wv|.nsf|.spc|.gym|.adx|.dsp|.adp|.ymf|.ast|.afc|.hps|.xsp|.xwav|.waa|.wvs|.wam|.gcm|.idsp|.mpdsp|.mss|.spt|.rsd|.mid|.kar|.sap|"
-    ".cmc|.cmr|.dmc|.mpt|.mpd|.rmt|.tmc|.tm8|.tm2|.oga|.url|.pxml|.tta|.rss|.cm3|.cms|.dlt|.brstm|.mka";
-  if (m_filename.find_last_of(".") != string::npos) {
-    CStdString extension = m_filename.substr (m_filename.find_last_of ("."));
-    if (!extension.IsEmpty() && m_musicExtensions.Find (extension.ToLower()) != -1)
-      m_audio_extension = true;
-    }
-  //}}}
   //{{{  log
   if (m_gen_log) {
     CLog::SetLogLevel(LOG_LEVEL_DEBUG);
@@ -1073,16 +1055,6 @@ int main (int argc, char* argv[]) {
   m_has_subtitle  = m_has_external_subtitles || m_omx_reader.SubtitleStreamCount();
   m_loop = m_loop && m_omx_reader.CanSeek();
 
-  if (m_audio_extension) {
-    CLog::Log (LOGWARNING, "%s - Ignoring video in audio filetype:%s", __FUNCTION__, m_filename.c_str());
-    m_has_video = false;
-    }
-
-  if (m_filename.find ("3DSBS") != string::npos || m_filename.find("HSBS") != string::npos)
-    m_3d = CONF_FLAGS_FORMAT_SBS;
-  else if(m_filename.find ("3DTAB") != string::npos || m_filename.find("HTAB") != string::npos)
-    m_3d = CONF_FLAGS_FORMAT_TB;
-
   // 3d modes don't work without switch hdmi mode
   if (m_3d != CONF_FLAGS_FORMAT_NONE || m_NativeDeinterlace)
     m_refresh = true;
@@ -1090,10 +1062,8 @@ int main (int argc, char* argv[]) {
   // you really don't want want to match refresh rate without hdmi clock sync
   if ((m_refresh || m_NativeDeinterlace) && !m_no_hdmi_clock_sync)
     m_config_video.hdmi_clock_sync = true;
-
   if (!m_av_clock->OMXInitialize())
     goto do_exit;
-
   if (m_config_video.hdmi_clock_sync && !m_av_clock->HDMIClockSync())
     goto do_exit;
 
@@ -1112,25 +1082,24 @@ int main (int argc, char* argv[]) {
 
   //{{{  video
   if (m_has_video && m_refresh) {
-    memset(&tv_state, 0, sizeof(TV_DISPLAY_STATE_T));
+    memset (&tv_state, 0, sizeof(TV_DISPLAY_STATE_T));
     m_BcmHost.vc_tv_get_display_state (&tv_state);
-    SetVideoMode (m_config_video.hints.width, m_config_video.hints.height, m_config_video.hints.fpsrate, m_config_video.hints.fpsscale, m_3d);
+    SetVideoMode (m_config_video.hints.width, m_config_video.hints.height,
+                  m_config_video.hints.fpsrate, m_config_video.hints.fpsscale, m_3d);
     }
   //}}}
   //{{{  display aspect
   TV_DISPLAY_STATE_T current_tv_state;
   memset(&current_tv_state, 0, sizeof(TV_DISPLAY_STATE_T));
   m_BcmHost.vc_tv_get_display_state(&current_tv_state);
-  if(current_tv_state.state & ( VC_HDMI_HDMI | VC_HDMI_DVI )) {
-    //{{{  HDMI or DVI on
-    m_config_video.display_aspect = get_display_aspect_ratio((HDMI_ASPECT_T)current_tv_state.display.hdmi.aspect_ratio);
-    }
-    //}}}
-  else {
-    //{{{  composite on
-    m_config_video.display_aspect = get_display_aspect_ratio((SDTV_ASPECT_T)current_tv_state.display.sdtv.display_options.aspect);
-    }
-    //}}}
+
+  if (current_tv_state.state & (VC_HDMI_HDMI | VC_HDMI_DVI))
+    //  HDMI or DVI on
+    m_config_video.display_aspect = get_display_aspect_ratio ((HDMI_ASPECT_T)current_tv_state.display.hdmi.aspect_ratio);
+  else
+    //  composite on
+    m_config_video.display_aspect = get_display_aspect_ratio ((SDTV_ASPECT_T)current_tv_state.display.sdtv.display_options.aspect);
+
   m_config_video.display_aspect *= (float)current_tv_state.display.hdmi.height/(float)current_tv_state.display.hdmi.width;
   //}}}
   if (m_orientation >= 0)
@@ -1224,381 +1193,380 @@ int main (int argc, char* argv[]) {
                                ? (OMXControlResult)(m_keyboard ? m_keyboard->getEvent() : KeyConfig::ACTION_BLANK)
                                : m_omxcontrol.getEvent();
        double oldPos, newPos;
-
-    switch(result.getKey()) {
-      //{{{
-      case KeyConfig::ACTION_SHOW_INFO:
-        m_tv_show_info = !m_tv_show_info;
-        vc_tv_show_info(m_tv_show_info);
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_DECREASE_SPEED:
-        if (playspeed_current < playspeed_slow_min || playspeed_current > playspeed_slow_max)
-          playspeed_current = playspeed_slow_max-1;
-        playspeed_current = max(playspeed_current-1, playspeed_slow_min);
-        SetSpeed(playspeeds[playspeed_current]);
-        DISPLAY_TEXT_SHORT(
-          strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
-        printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
-        m_Pause = false;
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_INCREASE_SPEED:
-        if (playspeed_current < playspeed_slow_min || playspeed_current > playspeed_slow_max)
-          playspeed_current = playspeed_slow_max-1;
-        playspeed_current = min(playspeed_current+1, playspeed_slow_max);
-        SetSpeed(playspeeds[playspeed_current]);
-        DISPLAY_TEXT_SHORT(
-          strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
-        printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
-        m_Pause = false;
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_REWIND:
-        if (playspeed_current >= playspeed_ff_min && playspeed_current <= playspeed_ff_max)
-        {
-          playspeed_current = playspeed_normal;
-          m_seek_flush = true;
-        }
-        else if (playspeed_current < playspeed_rew_max || playspeed_current > playspeed_rew_min)
-          playspeed_current = playspeed_rew_min;
-        else
-          playspeed_current = max(playspeed_current-1, playspeed_rew_max);
-        SetSpeed(playspeeds[playspeed_current]);
-        DISPLAY_TEXT_SHORT(
-          strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
-        printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
-        m_Pause = false;
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_FAST_FORWARD:
-        if (playspeed_current >= playspeed_rew_max && playspeed_current <= playspeed_rew_min)
-        {
-          playspeed_current = playspeed_normal;
-          m_seek_flush = true;
-        }
-        else if (playspeed_current < playspeed_ff_min || playspeed_current > playspeed_ff_max)
-          playspeed_current = playspeed_ff_min;
-        else
-          playspeed_current = min(playspeed_current+1, playspeed_ff_max);
-        SetSpeed(playspeeds[playspeed_current]);
-        DISPLAY_TEXT_SHORT(
-          strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
-        printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
-        m_Pause = false;
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_STEP:
-        m_av_clock->OMXStep();
-        printf("Step\n");
-        {
-          auto t = (unsigned) (m_av_clock->OMXMediaTime()*1e-3);
-          auto dur = m_omx_reader.GetStreamLength() / 1000;
+      //{{{  action key
+      switch(result.getKey()) {
+        //{{{
+        case KeyConfig::ACTION_SHOW_INFO:
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_DECREASE_SPEED:
+          if (playspeed_current < playspeed_slow_min || playspeed_current > playspeed_slow_max)
+            playspeed_current = playspeed_slow_max-1;
+          playspeed_current = max(playspeed_current-1, playspeed_slow_min);
+          SetSpeed(playspeeds[playspeed_current]);
           DISPLAY_TEXT_SHORT(
-            strprintf("Step\n%02d:%02d:%02d.%03d / %02d:%02d:%02d",
-              (t/3600000), (t/60000)%60, (t/1000)%60, t%1000,
-              (dur/3600), (dur/60)%60, dur%60));
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_PREVIOUS_AUDIO:
-        if(m_has_audio)
-        {
-          int new_index = m_omx_reader.GetAudioIndex() - 1;
-          if(new_index >= 0)
+            strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
+          printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
+          m_Pause = false;
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_INCREASE_SPEED:
+          if (playspeed_current < playspeed_slow_min || playspeed_current > playspeed_slow_max)
+            playspeed_current = playspeed_slow_max-1;
+          playspeed_current = min(playspeed_current+1, playspeed_slow_max);
+          SetSpeed(playspeeds[playspeed_current]);
+          DISPLAY_TEXT_SHORT(
+            strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
+          printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
+          m_Pause = false;
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_REWIND:
+          if (playspeed_current >= playspeed_ff_min && playspeed_current <= playspeed_ff_max)
           {
-            m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, new_index);
+            playspeed_current = playspeed_normal;
+            m_seek_flush = true;
+          }
+          else if (playspeed_current < playspeed_rew_max || playspeed_current > playspeed_rew_min)
+            playspeed_current = playspeed_rew_min;
+          else
+            playspeed_current = max(playspeed_current-1, playspeed_rew_max);
+          SetSpeed(playspeeds[playspeed_current]);
+          DISPLAY_TEXT_SHORT(
+            strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
+          printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
+          m_Pause = false;
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_FAST_FORWARD:
+          if (playspeed_current >= playspeed_rew_max && playspeed_current <= playspeed_rew_min)
+          {
+            playspeed_current = playspeed_normal;
+            m_seek_flush = true;
+          }
+          else if (playspeed_current < playspeed_ff_min || playspeed_current > playspeed_ff_max)
+            playspeed_current = playspeed_ff_min;
+          else
+            playspeed_current = min(playspeed_current+1, playspeed_ff_max);
+          SetSpeed(playspeeds[playspeed_current]);
+          DISPLAY_TEXT_SHORT(
+            strprintf("Playspeed: %.3f", playspeeds[playspeed_current]/1000.0f));
+          printf("Playspeed %.3f\n", playspeeds[playspeed_current]/1000.0f);
+          m_Pause = false;
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_STEP:
+          m_av_clock->OMXStep();
+          printf("Step\n");
+          {
+            auto t = (unsigned) (m_av_clock->OMXMediaTime()*1e-3);
+            auto dur = m_omx_reader.GetStreamLength() / 1000;
+            DISPLAY_TEXT_SHORT(
+              strprintf("Step\n%02d:%02d:%02d.%03d / %02d:%02d:%02d",
+                (t/3600000), (t/60000)%60, (t/1000)%60, t%1000,
+                (dur/3600), (dur/60)%60, dur%60));
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_PREVIOUS_AUDIO:
+          if(m_has_audio)
+          {
+            int new_index = m_omx_reader.GetAudioIndex() - 1;
+            if(new_index >= 0)
+            {
+              m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, new_index);
+              DISPLAY_TEXT_SHORT(
+                strprintf("Audio stream: %d", m_omx_reader.GetAudioIndex() + 1));
+            }
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_NEXT_AUDIO:
+          if(m_has_audio)
+          {
+            m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader.GetAudioIndex() + 1);
             DISPLAY_TEXT_SHORT(
               strprintf("Audio stream: %d", m_omx_reader.GetAudioIndex() + 1));
           }
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_NEXT_AUDIO:
-        if(m_has_audio)
-        {
-          m_omx_reader.SetActiveStream(OMXSTREAM_AUDIO, m_omx_reader.GetAudioIndex() + 1);
-          DISPLAY_TEXT_SHORT(
-            strprintf("Audio stream: %d", m_omx_reader.GetAudioIndex() + 1));
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_PREVIOUS_CHAPTER:
-        if(m_omx_reader.GetChapterCount() > 0) {
-          m_omx_reader.SeekChapter(m_omx_reader.GetChapter() - 1, &startpts);
-          DISPLAY_TEXT_LONG(strprintf("Chapter %d", m_omx_reader.GetChapter()));
-          FlushStreams(startpts);
-          m_seek_flush = true;
-          m_chapter_seek = true;
-        }
-        else {
-          m_incr = -600.0;
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_NEXT_CHAPTER:
-        if(m_omx_reader.GetChapterCount() > 0) {
-          m_omx_reader.SeekChapter(m_omx_reader.GetChapter() + 1, &startpts);
-          DISPLAY_TEXT_LONG(strprintf("Chapter %d", m_omx_reader.GetChapter()));
-          FlushStreams(startpts);
-          m_seek_flush = true;
-          m_chapter_seek = true;
-        }
-        else {
-          m_incr = 600.0;
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_PREVIOUS_SUBTITLE:
-        if(m_has_subtitle) {
-          if(!m_player_subtitles.GetUseExternalSubtitles()) {
-            if (m_player_subtitles.GetActiveStream() == 0) {
-              if(m_has_external_subtitles) {
-                DISPLAY_TEXT_SHORT("Subtitle file:\n" + m_external_subtitles_path);
-                m_player_subtitles.SetUseExternalSubtitles(true);
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_PREVIOUS_CHAPTER:
+          if(m_omx_reader.GetChapterCount() > 0) {
+            m_omx_reader.SeekChapter(m_omx_reader.GetChapter() - 1, &startpts);
+            DISPLAY_TEXT_LONG(strprintf("Chapter %d", m_omx_reader.GetChapter()));
+            FlushStreams(startpts);
+            m_seek_flush = true;
+            m_chapter_seek = true;
+          }
+          else {
+            m_incr = -600.0;
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_NEXT_CHAPTER:
+          if(m_omx_reader.GetChapterCount() > 0) {
+            m_omx_reader.SeekChapter(m_omx_reader.GetChapter() + 1, &startpts);
+            DISPLAY_TEXT_LONG(strprintf("Chapter %d", m_omx_reader.GetChapter()));
+            FlushStreams(startpts);
+            m_seek_flush = true;
+            m_chapter_seek = true;
+          }
+          else {
+            m_incr = 600.0;
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_PREVIOUS_SUBTITLE:
+          if(m_has_subtitle) {
+            if(!m_player_subtitles.GetUseExternalSubtitles()) {
+              if (m_player_subtitles.GetActiveStream() == 0) {
+                if(m_has_external_subtitles) {
+                  DISPLAY_TEXT_SHORT("Subtitle file:\n" + m_external_subtitles_path);
+                  m_player_subtitles.SetUseExternalSubtitles(true);
+                }
+              }
+              else {
+                auto new_index = m_player_subtitles.GetActiveStream()-1;
+                DISPLAY_TEXT_SHORT(strprintf("Subtitle stream: %d", new_index+1));
+                m_player_subtitles.SetActiveStream(new_index);
+              }
+            }
+
+            m_player_subtitles.SetVisible(true);
+            printSubtitleInfo();
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_NEXT_SUBTITLE:
+          if(m_has_subtitle) {
+            if(m_player_subtitles.GetUseExternalSubtitles()) {
+              if(m_omx_reader.SubtitleStreamCount()) {
+                assert(m_player_subtitles.GetActiveStream() == 0);
+                DISPLAY_TEXT_SHORT("Subtitle stream: 1");
+                m_player_subtitles.SetUseExternalSubtitles(false);
               }
             }
             else {
-              auto new_index = m_player_subtitles.GetActiveStream()-1;
-              DISPLAY_TEXT_SHORT(strprintf("Subtitle stream: %d", new_index+1));
-              m_player_subtitles.SetActiveStream(new_index);
+              auto new_index = m_player_subtitles.GetActiveStream()+1;
+              if(new_index < (size_t) m_omx_reader.SubtitleStreamCount()) {
+                DISPLAY_TEXT_SHORT(strprintf("Subtitle stream: %d", new_index+1));
+                m_player_subtitles.SetActiveStream(new_index);
+              }
             }
-          }
 
-          m_player_subtitles.SetVisible(true);
-          printSubtitleInfo();
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_NEXT_SUBTITLE:
-        if(m_has_subtitle) {
-          if(m_player_subtitles.GetUseExternalSubtitles()) {
-            if(m_omx_reader.SubtitleStreamCount()) {
-              assert(m_player_subtitles.GetActiveStream() == 0);
-              DISPLAY_TEXT_SHORT("Subtitle stream: 1");
-              m_player_subtitles.SetUseExternalSubtitles(false);
-            }
+            m_player_subtitles.SetVisible(true);
+            printSubtitleInfo();
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_TOGGLE_SUBTITLE:
+          if(m_has_subtitle) {
+            m_player_subtitles.SetVisible(!m_player_subtitles.GetVisible());
+            printSubtitleInfo();
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_HIDE_SUBTITLES:
+          if(m_has_subtitle) {
+            m_player_subtitles.SetVisible(false);
+            printSubtitleInfo();
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_SHOW_SUBTITLES:
+          if(m_has_subtitle) {
+            m_player_subtitles.SetVisible(true);
+            printSubtitleInfo();
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_DECREASE_SUBTITLE_DELAY:
+          if(m_has_subtitle && m_player_subtitles.GetVisible()) {
+            auto new_delay = m_player_subtitles.GetDelay() - 250;
+            DISPLAY_TEXT_SHORT(strprintf("Subtitle delay: %d ms", new_delay));
+            m_player_subtitles.SetDelay(new_delay);
+            printSubtitleInfo();
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_INCREASE_SUBTITLE_DELAY:
+          if(m_has_subtitle && m_player_subtitles.GetVisible()) {
+            auto new_delay = m_player_subtitles.GetDelay() + 250;
+            DISPLAY_TEXT_SHORT(strprintf("Subtitle delay: %d ms", new_delay));
+            m_player_subtitles.SetDelay(new_delay);
+            printSubtitleInfo();
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_EXIT:
+          m_stop = true;
+          goto do_exit;
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_SEEK_BACK_SMALL:
+          if(m_omx_reader.CanSeek()) m_incr = -30.0;
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_SEEK_FORWARD_SMALL:
+          if(m_omx_reader.CanSeek()) m_incr = 30.0;
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_SEEK_FORWARD_LARGE:
+          if(m_omx_reader.CanSeek()) m_incr = 600.0;
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_SEEK_BACK_LARGE:
+          if(m_omx_reader.CanSeek()) m_incr = -600.0;
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_SEEK_RELATIVE:
+            m_incr = result.getArg() * 1e-6;
+            break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_SEEK_ABSOLUTE:
+            newPos = result.getArg() * 1e-6;
+            oldPos = m_av_clock->OMXMediaTime()*1e-6;
+            m_incr = newPos - oldPos;
+            break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_SET_ALPHA:
+            m_player_video.SetAlpha(result.getArg());
+            break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_PLAY:
+          m_Pause=false;
+          if(m_has_subtitle) {
+            m_player_subtitles.Resume();
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_PAUSE:
+          m_Pause=true;
+          if(m_has_subtitle) {
+            m_player_subtitles.Pause();
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_PLAYPAUSE:
+          m_Pause = !m_Pause;
+          if (m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_NORMAL && m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_PAUSE) {
+            printf("resume\n");
+            playspeed_current = playspeed_normal;
+            SetSpeed(playspeeds[playspeed_current]);
+            m_seek_flush = true;
+          }
+          if(m_Pause) {
+            if(m_has_subtitle)
+              m_player_subtitles.Pause();
+
+            auto t = (unsigned) (m_av_clock->OMXMediaTime()*1e-6);
+            auto dur = m_omx_reader.GetStreamLength() / 1000;
+            DISPLAY_TEXT_LONG(strprintf("Pause\n%02d:%02d:%02d / %02d:%02d:%02d",
+              (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
           }
           else {
-            auto new_index = m_player_subtitles.GetActiveStream()+1;
-            if(new_index < (size_t) m_omx_reader.SubtitleStreamCount()) {
-              DISPLAY_TEXT_SHORT(strprintf("Subtitle stream: %d", new_index+1));
-              m_player_subtitles.SetActiveStream(new_index);
-            }
+            if(m_has_subtitle)
+              m_player_subtitles.Resume();
+
+            auto t = (unsigned) (m_av_clock->OMXMediaTime()*1e-6);
+            auto dur = m_omx_reader.GetStreamLength() / 1000;
+            DISPLAY_TEXT_SHORT(strprintf("Play\n%02d:%02d:%02d / %02d:%02d:%02d",
+              (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
           }
-
-          m_player_subtitles.SetVisible(true);
-          printSubtitleInfo();
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_TOGGLE_SUBTITLE:
-        if(m_has_subtitle) {
-          m_player_subtitles.SetVisible(!m_player_subtitles.GetVisible());
-          printSubtitleInfo();
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_HIDE_SUBTITLES:
-        if(m_has_subtitle) {
-          m_player_subtitles.SetVisible(false);
-          printSubtitleInfo();
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_SHOW_SUBTITLES:
-        if(m_has_subtitle) {
-          m_player_subtitles.SetVisible(true);
-          printSubtitleInfo();
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_DECREASE_SUBTITLE_DELAY:
-        if(m_has_subtitle && m_player_subtitles.GetVisible()) {
-          auto new_delay = m_player_subtitles.GetDelay() - 250;
-          DISPLAY_TEXT_SHORT(strprintf("Subtitle delay: %d ms", new_delay));
-          m_player_subtitles.SetDelay(new_delay);
-          printSubtitleInfo();
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_INCREASE_SUBTITLE_DELAY:
-        if(m_has_subtitle && m_player_subtitles.GetVisible()) {
-          auto new_delay = m_player_subtitles.GetDelay() + 250;
-          DISPLAY_TEXT_SHORT(strprintf("Subtitle delay: %d ms", new_delay));
-          m_player_subtitles.SetDelay(new_delay);
-          printSubtitleInfo();
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_EXIT:
-        m_stop = true;
-        goto do_exit;
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_SEEK_BACK_SMALL:
-        if(m_omx_reader.CanSeek()) m_incr = -30.0;
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_SEEK_FORWARD_SMALL:
-        if(m_omx_reader.CanSeek()) m_incr = 30.0;
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_SEEK_FORWARD_LARGE:
-        if(m_omx_reader.CanSeek()) m_incr = 600.0;
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_SEEK_BACK_LARGE:
-        if(m_omx_reader.CanSeek()) m_incr = -600.0;
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_SEEK_RELATIVE:
-          m_incr = result.getArg() * 1e-6;
           break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_SEEK_ABSOLUTE:
-          newPos = result.getArg() * 1e-6;
-          oldPos = m_av_clock->OMXMediaTime()*1e-6;
-          m_incr = newPos - oldPos;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_MOVE_VIDEO:
+          sscanf(result.getWinArg(), "%f %f %f %f", &m_config_video.dst_rect.x1, &m_config_video.dst_rect.y1, &m_config_video.dst_rect.x2, &m_config_video.dst_rect.y2);
+          m_player_video.SetVideoRect(m_config_video.src_rect, m_config_video.dst_rect);
+          m_player_subtitles.SetSubtitleRect(m_config_video.dst_rect.x1, m_config_video.dst_rect.y1, m_config_video.dst_rect.x2, m_config_video.dst_rect.y2);
           break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_SET_ALPHA:
-          m_player_video.SetAlpha(result.getArg());
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_CROP_VIDEO:
+          sscanf(result.getWinArg(), "%f %f %f %f", &m_config_video.src_rect.x1, &m_config_video.src_rect.y1, &m_config_video.src_rect.x2, &m_config_video.src_rect.y2);
+          m_player_video.SetVideoRect(m_config_video.src_rect, m_config_video.dst_rect);
           break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_PLAY:
-        m_Pause=false;
-        if(m_has_subtitle) {
-          m_player_subtitles.Resume();
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_HIDE_VIDEO:
+          // set alpha to minimum
+          m_player_video.SetAlpha(0);
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_UNHIDE_VIDEO:
+          // set alpha to maximum
+          m_player_video.SetAlpha(255);
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_SET_ASPECT_MODE:
+          if (result.getWinArg()) {
+            if (!strcasecmp(result.getWinArg(), "letterbox"))
+              m_config_video.aspectMode = 1;
+            else if (!strcasecmp(result.getWinArg(), "fill"))
+              m_config_video.aspectMode = 2;
+            else if (!strcasecmp(result.getWinArg(), "stretch"))
+              m_config_video.aspectMode = 3;
+            else
+              m_config_video.aspectMode = 0;
+            m_player_video.SetVideoRect(m_config_video.aspectMode);
+          }
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_DECREASE_VOLUME:
+          m_Volume -= 300;
+          m_player_audio.SetVolume(pow(10, m_Volume / 2000.0));
+          DISPLAY_TEXT_SHORT(strprintf("Volume: %.2f dB",
+            m_Volume / 100.0f));
+          printf("Current Volume: %.2fdB\n", m_Volume / 100.0f);
+          break;
+        //}}}
+        //{{{
+        case KeyConfig::ACTION_INCREASE_VOLUME:
+          m_Volume += 300;
+          m_player_audio.SetVolume(pow(10, m_Volume / 2000.0));
+          DISPLAY_TEXT_SHORT(strprintf("Volume: %.2f dB",
+            m_Volume / 100.0f));
+          printf("Current Volume: %.2fdB\n", m_Volume / 100.0f);
+          break;
+        //}}}
+        //{{{
+        default:
+          break;
+        //}}}
         }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_PAUSE:
-        m_Pause=true;
-        if(m_has_subtitle) {
-          m_player_subtitles.Pause();
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_PLAYPAUSE:
-        m_Pause = !m_Pause;
-        if (m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_NORMAL && m_av_clock->OMXPlaySpeed() != DVD_PLAYSPEED_PAUSE) {
-          printf("resume\n");
-          playspeed_current = playspeed_normal;
-          SetSpeed(playspeeds[playspeed_current]);
-          m_seek_flush = true;
-        }
-        if(m_Pause) {
-          if(m_has_subtitle)
-            m_player_subtitles.Pause();
-
-          auto t = (unsigned) (m_av_clock->OMXMediaTime()*1e-6);
-          auto dur = m_omx_reader.GetStreamLength() / 1000;
-          DISPLAY_TEXT_LONG(strprintf("Pause\n%02d:%02d:%02d / %02d:%02d:%02d",
-            (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
-        }
-        else {
-          if(m_has_subtitle)
-            m_player_subtitles.Resume();
-
-          auto t = (unsigned) (m_av_clock->OMXMediaTime()*1e-6);
-          auto dur = m_omx_reader.GetStreamLength() / 1000;
-          DISPLAY_TEXT_SHORT(strprintf("Play\n%02d:%02d:%02d / %02d:%02d:%02d",
-            (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_MOVE_VIDEO:
-        sscanf(result.getWinArg(), "%f %f %f %f", &m_config_video.dst_rect.x1, &m_config_video.dst_rect.y1, &m_config_video.dst_rect.x2, &m_config_video.dst_rect.y2);
-        m_player_video.SetVideoRect(m_config_video.src_rect, m_config_video.dst_rect);
-        m_player_subtitles.SetSubtitleRect(m_config_video.dst_rect.x1, m_config_video.dst_rect.y1, m_config_video.dst_rect.x2, m_config_video.dst_rect.y2);
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_CROP_VIDEO:
-        sscanf(result.getWinArg(), "%f %f %f %f", &m_config_video.src_rect.x1, &m_config_video.src_rect.y1, &m_config_video.src_rect.x2, &m_config_video.src_rect.y2);
-        m_player_video.SetVideoRect(m_config_video.src_rect, m_config_video.dst_rect);
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_HIDE_VIDEO:
-        // set alpha to minimum
-        m_player_video.SetAlpha(0);
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_UNHIDE_VIDEO:
-        // set alpha to maximum
-        m_player_video.SetAlpha(255);
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_SET_ASPECT_MODE:
-        if (result.getWinArg()) {
-          if (!strcasecmp(result.getWinArg(), "letterbox"))
-            m_config_video.aspectMode = 1;
-          else if (!strcasecmp(result.getWinArg(), "fill"))
-            m_config_video.aspectMode = 2;
-          else if (!strcasecmp(result.getWinArg(), "stretch"))
-            m_config_video.aspectMode = 3;
-          else
-            m_config_video.aspectMode = 0;
-          m_player_video.SetVideoRect(m_config_video.aspectMode);
-        }
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_DECREASE_VOLUME:
-        m_Volume -= 300;
-        m_player_audio.SetVolume(pow(10, m_Volume / 2000.0));
-        DISPLAY_TEXT_SHORT(strprintf("Volume: %.2f dB",
-          m_Volume / 100.0f));
-        printf("Current Volume: %.2fdB\n", m_Volume / 100.0f);
-        break;
-      //}}}
-      //{{{
-      case KeyConfig::ACTION_INCREASE_VOLUME:
-        m_Volume += 300;
-        m_player_audio.SetVolume(pow(10, m_Volume / 2000.0));
-        DISPLAY_TEXT_SHORT(strprintf("Volume: %.2f dB",
-          m_Volume / 100.0f));
-        printf("Current Volume: %.2fdB\n", m_Volume / 100.0f);
-        break;
-      //}}}
-      //{{{
-      default:
-        break;
       //}}}
       }
-    }
 
     if (idle) {
       usleep(10000);
@@ -1620,10 +1588,10 @@ int main (int argc, char* argv[]) {
         if (m_omx_reader.SeekTime((int)seek_pos, m_incr < 0.0f, &startpts)) {
           unsigned t = (unsigned)(startpts*1e-6);
           auto dur = m_omx_reader.GetStreamLength() / 1000;
-          DISPLAY_TEXT_LONG(strprintf("Seek\n%02d:%02d:%02d / %02d:%02d:%02d",
-              (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
-          printf("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
-          FlushStreams(startpts);
+          DISPLAY_TEXT_LONG (strprintf("Seek\n%02d:%02d:%02d / %02d:%02d:%02d",
+                             (t/3600), (t/60)%60, t%60, (dur/3600), (dur/60)%60, dur%60));
+          printf ("Seek to: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+          FlushStreams (startpts);
           }
         }
 
@@ -1636,17 +1604,18 @@ int main (int argc, char* argv[]) {
       if (m_has_video && !m_player_video.Reset())
         goto do_exit;
 
-      CLog::Log(LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
+      CLog::Log (LOGDEBUG, "Seeked %.0f %.0f %.0f\n", DVD_MSEC_TO_TIME(seek_pos), startpts, m_av_clock->OMXMediaTime());
 
       m_av_clock->OMXPause();
 
-      if(m_has_subtitle)
+      if (m_has_subtitle)
         m_player_subtitles.Resume();
       m_packet_after_seek = false;
       m_seek_flush = false;
       m_incr = 0;
       }
-    else if(m_packet_after_seek && TRICKPLAY(m_av_clock->OMXPlaySpeed())) {
+
+    else if (m_packet_after_seek && TRICKPLAY(m_av_clock->OMXPlaySpeed())) {
       double seek_pos     = 0;
       double pts          = 0;
       pts = m_av_clock->OMXMediaTime();
@@ -1692,35 +1661,10 @@ int main (int argc, char* argv[]) {
       float threshold = min(0.1f, (float)m_player_audio.GetCacheTotal() * 0.1f);
       bool audio_fifo_low = false, video_fifo_low = false, audio_fifo_high = false, video_fifo_high = false;
 
-      if (m_stats) {
-        static int count;
-        if ((count++ & 7) == 0)
-           printf("M:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk                            \r", stamp,
-               video_fifo, (m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())>>10, m_player_video.GetDecoderBufferSize()>>10,
-               audio_fifo, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
-               m_player_video.GetCached()>>10, m_player_audio.GetCached()>>10);
-        }
-
-      if (m_tv_show_info) {
-        static unsigned count;
-        if ((count++ & 7) == 0) {
-          char response[80];
-          if (m_player_video.GetDecoderBufferSize() && m_player_audio.GetCacheTotal())
-            vc_gencmd(response, sizeof response, "render_bar 4 video_fifo %d %d %d %d",
-                (int)(100.0*m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())/m_player_video.GetDecoderBufferSize(),
-                (int)(100.0*video_fifo/m_player_audio.GetCacheTotal()),
-                0, 100);
-          if (m_player_audio.GetCacheTotal())
-            vc_gencmd(response, sizeof response, "render_bar 5 audio_fifo %d %d %d %d",
-                (int)(100.0*audio_fifo/m_player_audio.GetCacheTotal()),
-                (int)(100.0*m_player_audio.GetDelay()/m_player_audio.GetCacheTotal()),
-                0, 100);
-          vc_gencmd(response, sizeof response, "render_bar 6 video_queue %d %d %d %d",
-                m_player_video.GetLevel(), 0, 0, 100);
-          vc_gencmd(response, sizeof response, "render_bar 7 audio_queue %d %d %d %d",
-                m_player_audio.GetLevel(), 0, 0, 100);
-          }
-        }
+      printf ("M:%8.0f V:%6.2fs %6dk/%6dk A:%6.2f %6.02fs/%6.02fs Cv:%6dk Ca:%6dk                            \r", stamp,
+              video_fifo, (m_player_video.GetDecoderBufferSize()-m_player_video.GetDecoderFreeSpace())>>10, m_player_video.GetDecoderBufferSize()>>10,
+              audio_fifo, m_player_audio.GetDelay(), m_player_audio.GetCacheTotal(),
+              m_player_video.GetCached()>>10, m_player_audio.GetCached()>>10);
 
       if (audio_pts != DVD_NOPTS_VALUE) {
         audio_fifo_low = m_has_audio && audio_fifo < threshold;
@@ -1829,15 +1773,16 @@ int main (int argc, char* argv[]) {
         m_omx_pkt = NULL;
       else
         OMXClock::OMXSleep(10);
-    }
-      else if(m_has_audio && m_omx_pkt && !TRICKPLAY(m_av_clock->OMXPlaySpeed()) && m_omx_pkt->codec_type == AVMEDIA_TYPE_AUDIO) {
-      if(m_player_audio.AddPacket(m_omx_pkt))
+      }
+    else if (m_has_audio && m_omx_pkt && !TRICKPLAY(m_av_clock->OMXPlaySpeed()) &&
+             m_omx_pkt->codec_type == AVMEDIA_TYPE_AUDIO) {
+      if (m_player_audio.AddPacket(m_omx_pkt))
         m_omx_pkt = NULL;
       else
         OMXClock::OMXSleep(10);
       }
-    else if(m_has_subtitle && m_omx_pkt && !TRICKPLAY(m_av_clock->OMXPlaySpeed()) &&
-            m_omx_pkt->codec_type == AVMEDIA_TYPE_SUBTITLE) {
+    else if (m_has_subtitle && m_omx_pkt && !TRICKPLAY(m_av_clock->OMXPlaySpeed()) &&
+             m_omx_pkt->codec_type == AVMEDIA_TYPE_SUBTITLE) {
       auto result = m_player_subtitles.AddPacket(m_omx_pkt, m_omx_reader.GetRelativeIndex(m_omx_pkt->stream_index));
       if (result)
         m_omx_pkt = NULL;
@@ -1845,7 +1790,7 @@ int main (int argc, char* argv[]) {
         OMXClock::OMXSleep(10);
       }
     else {
-      if(m_omx_pkt) {
+      if (m_omx_pkt) {
         m_omx_reader.FreePacket(m_omx_pkt);
         m_omx_pkt = NULL;
         }

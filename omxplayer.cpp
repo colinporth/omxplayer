@@ -77,9 +77,10 @@ using namespace std;
 #define DISPLAY_TEXT_LONG(text) m_player_subtitles.DisplayText(text, 2000)
 
 typedef enum { CONF_FLAGS_FORMAT_NONE, CONF_FLAGS_FORMAT_SBS, CONF_FLAGS_FORMAT_TB, CONF_FLAGS_FORMAT_FP } FORMAT_3D_T;
-const string m_font_path = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
-const string m_italic_font_path = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
-const float m_font_size = 0.04f;
+
+const float kFontSize = 0.03f;
+const string kFontPath = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
+const string kItalicFontPath = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
 
 //{{{  vars
 string m_dbus_name        = "org.mpris.MediaPlayer2.omxplayer";
@@ -146,7 +147,7 @@ void printSubtitleInfo() {
   printf ("Subtitle count: %d, state: %s, index: %d, delay: %d\n",
           count, m_has_subtitle && m_player_subtitles.GetVisible() ? " on" : "off",
           index+1, m_has_subtitle ? m_player_subtitles.GetDelay() : 0);
-}
+  }
 //}}}
 
 void FlushStreams(double pts);
@@ -1019,14 +1020,13 @@ int main (int argc, char* argv[]) {
   //{{{  subtitles
   if (!m_player_subtitles.Open (m_omx_reader.SubtitleStreamCount(),
                                 move(external_subtitles),
-                                m_font_path, m_italic_font_path, m_font_size,
+                                kFontPath, kItalicFontPath, kFontSize,
                                 false, true, 3,
                                 m_config_video.display, m_config_video.layer + 1, m_av_clock))
     goto do_exit;
 
-  if (m_config_video.dst_rect.x2 > 0 && m_config_video.dst_rect.y2 > 0)
-      m_player_subtitles.SetSubtitleRect (m_config_video.dst_rect.x1, m_config_video.dst_rect.y1,
-                                          m_config_video.dst_rect.x2, m_config_video.dst_rect.y2);
+  m_player_subtitles.SetSubtitleRect (m_config_video.dst_rect.x1, m_config_video.dst_rect.y1,
+                                      m_config_video.dst_rect.x2, m_config_video.dst_rect.y2);
 
   if (m_has_subtitle) {
     if (m_subtitle_index != -1)

@@ -474,9 +474,7 @@ int main (int argc, char* argv[]) {
   const int avdict_opt      = 0x401;
   //}}}
 
-  #define S(x) (int)(DVD_PLAYSPEED_NORMAL*(x))
-
-  //{{{  opt decoder
+  //{{{  options
   //{{{
   struct option longopts[] = {
     { "info",         no_argument,        NULL,          'i' },
@@ -1443,25 +1441,25 @@ int main (int argc, char* argv[]) {
               }
             }
           else {
-            m_latency = m_latency*0.99f + latency*0.01f;
-            float speed = 1.0f;
-            if (m_latency < 0.5f*m_threshold)
+            m_latency = m_latency * 0.99f + latency * 0.01f;
+            float speed = 1.f;
+            if (m_latency < 0.5f * m_threshold)
               speed = 0.990f;
-            else if (m_latency < 0.9f*m_threshold)
+            else if (m_latency < 0.9f * m_threshold)
               speed = 0.999f;
-            else if (m_latency > 2.0f*m_threshold)
+            else if (m_latency > 2.f * m_threshold)
               speed = 1.010f;
-            else if (m_latency > 1.1f*m_threshold)
+            else if (m_latency > 1.1f * m_threshold)
               speed = 1.001f;
 
-            m_av_clock->OMXSetSpeed (S(speed));
-            m_av_clock->OMXSetSpeed (S(speed), true, true);
+            m_av_clock->OMXSetSpeed ((int)(DVD_PLAYSPEED_NORMAL*speed));
+            m_av_clock->OMXSetSpeed ((int)(DVD_PLAYSPEED_NORMAL*speed), true, true);
             CLog::Log (LOGDEBUG, "Live: %.2f (%.2f) S:%.3f T:%.2f\n", m_latency, latency, speed, m_threshold);
             }
           }
         }
         //}}}
-      else if(!m_Pause && (m_omx_reader.IsEof() || m_omx_pkt || (audio_fifo_high && video_fifo_high))) {
+      else if (!m_Pause && (m_omx_reader.IsEof() || m_omx_pkt || (audio_fifo_high && video_fifo_high))) {
         //{{{  resume
         if (m_av_clock->OMXIsPaused()) {
           CLog::Log (LOGDEBUG, "Resume %.2f,%.2f (%d,%d,%d,%d) EOF:%d PKT:%p\n", audio_fifo, video_fifo, audio_fifo_low, video_fifo_low, audio_fifo_high, video_fifo_high, m_omx_reader.IsEof(), m_omx_pkt);
@@ -1489,6 +1487,7 @@ int main (int argc, char* argv[]) {
       sentStarted = true;
       }
       //}}}
+
     if (!m_omx_pkt)
       m_omx_pkt = m_omx_reader.Read();
     if (m_omx_pkt)
@@ -1552,7 +1551,7 @@ int main (int argc, char* argv[]) {
     //}}}
 
 exit:
-  unsigned t = (unsigned)(m_av_clock->OMXMediaTime()*1e-6);
+  auto t = (unsigned)(m_av_clock->OMXMediaTime()*1e-6);
   printf ("Stopped at: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
 
   if (m_NativeDeinterlace) {

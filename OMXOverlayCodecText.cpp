@@ -30,51 +30,51 @@
 //}}}
 
 //{{{
-COMXOverlayCodecText::COMXOverlayCodecText() : COMXOverlayCodec("Text Subtitle Decoder")
-{
+COMXOverlayCodecText::COMXOverlayCodecText() : COMXOverlayCodec("Text Subtitle Decoder") {
+
   m_pOverlay = NULL;
   m_bIsSSA = false;
-}
+  }
 //}}}
 //{{{
-COMXOverlayCodecText::~COMXOverlayCodecText()
-{
-  if(m_pOverlay)
+COMXOverlayCodecText::~COMXOverlayCodecText() {
+
+  if (m_pOverlay)
     delete m_pOverlay;
   m_pOverlay = NULL;
-}
+  }
 //}}}
 
 //{{{
-bool COMXOverlayCodecText::Open(COMXStreamInfo &hints)
-{
+bool COMXOverlayCodecText::Open(COMXStreamInfo &hints) {
+
   m_bIsSSA = hints.codec == AV_CODEC_ID_SSA || hints.codec == AV_CODEC_ID_ASS;
-  if(hints.codec == AV_CODEC_ID_SUBRIP ||
-     hints.codec == AV_CODEC_ID_SSA ||
-     hints.codec == AV_CODEC_ID_ASS)
+  if (hints.codec == AV_CODEC_ID_SUBRIP ||
+      hints.codec == AV_CODEC_ID_SSA ||
+      hints.codec == AV_CODEC_ID_ASS)
     return true;
+
   return false;
-}
+  }
 //}}}
 //{{{
-void COMXOverlayCodecText::Dispose()
-{
-  if(m_pOverlay)
+void COMXOverlayCodecText::Dispose() {
+
+  if (m_pOverlay)
     delete m_pOverlay;
   m_pOverlay = NULL;
-}
+  }
 //}}}
 
 //{{{
-int COMXOverlayCodecText::Decode(BYTE* data, int size, double pts, double duration)
-{
-  if(m_pOverlay)
+int COMXOverlayCodecText::Decode(BYTE* data, int size, double pts, double duration) {
+
+  if (m_pOverlay)
     delete m_pOverlay;
 
   m_pOverlay = new COMXOverlayText();
   m_pOverlay->iPTSStartTime = 0;
   m_pOverlay->iPTSStopTime = 0;
-
 
   char *start, *end, *p;
   start = (char*)data;
@@ -84,8 +84,7 @@ int COMXOverlayCodecText::Decode(BYTE* data, int size, double pts, double durati
   if (m_bIsSSA) {
     // currently just skip the prefixed ssa fields (8 fields)
     int nFieldCount = 8;
-    while (nFieldCount > 0 && start < end)
-    {
+    while (nFieldCount > 0 && start < end) {
       if (*start == ',')
         nFieldCount--;
 
@@ -97,12 +96,9 @@ int COMXOverlayCodecText::Decode(BYTE* data, int size, double pts, double durati
   COMXSubtitleTagSami TagConv;
   bool Taginit = TagConv.Init();
 
-  while(p<end)
-  {
-    if(*p == '{')
-    {
-      if(p>start)
-      {
+  while(p<end) {
+    if(*p == '{') {
+      if(p>start) {
         if(Taginit)
           TagConv.ConvertLine(m_pOverlay, start, p-start);
         else
@@ -123,10 +119,8 @@ int COMXOverlayCodecText::Decode(BYTE* data, int size, double pts, double durati
     }
     p++;
   }
-  if(p>start)
-  {
-    if(Taginit)
-    {
+  if(p>start) {
+    if(Taginit) {
       TagConv.ConvertLine(m_pOverlay, start, p-start);
       TagConv.CloseTag(m_pOverlay);
     }
@@ -137,31 +131,32 @@ int COMXOverlayCodecText::Decode(BYTE* data, int size, double pts, double durati
 }
 //}}}
 //{{{
-void COMXOverlayCodecText::Reset()
-{
-  if(m_pOverlay)
+void COMXOverlayCodecText::Reset() {
+
+  if (m_pOverlay)
     delete m_pOverlay;
+
   m_pOverlay = NULL;
-}
+  }
 //}}}
 //{{{
-void COMXOverlayCodecText::Flush()
-{
-  if(m_pOverlay)
+void COMXOverlayCodecText::Flush() {
+
+  if (m_pOverlay)
     delete m_pOverlay;
   m_pOverlay = NULL;
-}
+  }
 //}}}
 
 //{{{
-COMXOverlay* COMXOverlayCodecText::GetOverlay()
-{
-  if(m_pOverlay)
-  {
+COMXOverlay* COMXOverlayCodecText::GetOverlay() {
+
+  if (m_pOverlay) {
     COMXOverlay* overlay = m_pOverlay;
     m_pOverlay = NULL;
     return overlay;
-  }
+    }
+
   return NULL;
-}
+  }
 //}}}

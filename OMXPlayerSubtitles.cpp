@@ -38,26 +38,26 @@ using namespace boost;
 
 //{{{
 OMXPlayerSubtitles::OMXPlayerSubtitles() BOOST_NOEXCEPT
-: m_visible(),
-  m_use_external_subtitles(),
-  m_active_index(),
-  m_delay(),
-  m_thread_stopped(),
-  m_font_size(),
-  m_centered(),
-  m_ghost_box(),
-  m_lines(),
-  m_av_clock(),
-#ifndef NDEBUG
-  m_open()
-#endif
-{}
+  : m_visible(),
+    m_use_external_subtitles(),
+    m_active_index(),
+    m_delay(),
+    m_thread_stopped(),
+    m_font_size(),
+    m_centered(),
+    m_ghost_box(),
+    m_lines(),
+    m_av_clock(),
+  #ifndef NDEBUG
+    m_open()
+  #endif
+
+    {}
 //}}}
 //{{{
-OMXPlayerSubtitles::~OMXPlayerSubtitles() BOOST_NOEXCEPT
-{
+OMXPlayerSubtitles::~OMXPlayerSubtitles() BOOST_NOEXCEPT {
   Close();
-}
+  }
 //}}}
 
 //{{{
@@ -70,8 +70,7 @@ bool OMXPlayerSubtitles::Open (size_t stream_count,
                                bool ghost_box,
                                unsigned int lines,
                                int display, int layer,
-                               OMXClock* clock) BOOST_NOEXCEPT
-{
+                               OMXClock* clock) BOOST_NOEXCEPT {
   assert(!m_open);
 
   m_subtitle_buffers.resize(stream_count, circular_buffer<Subtitle>(32));
@@ -103,17 +102,15 @@ bool OMXPlayerSubtitles::Open (size_t stream_count,
 #endif
 
   return true;
-}
-
+  }
 //}}}
 //{{{
-void OMXPlayerSubtitles::Close() BOOST_NOEXCEPT
-{
-  if(Running())
-  {
+void OMXPlayerSubtitles::Close() BOOST_NOEXCEPT {
+
+  if(Running()) {
     SendToRenderer(Message::Stop{});
     StopThread();
-  }
+    }
 
   m_mailbox.clear();
   m_subtitle_buffers.clear();
@@ -121,58 +118,45 @@ void OMXPlayerSubtitles::Close() BOOST_NOEXCEPT
 #ifndef NDEBUG
   m_open = false;
 #endif
-}
+  }
 //}}}
 
 //{{{
-void OMXPlayerSubtitles::Process()
-{
-  try
-  {
-    RenderLoop(m_font_path, m_italic_font_path, m_font_size, m_centered,
-               m_ghost_box, m_lines, m_av_clock);
-  }
-  catch(Enforce_error& e)
-  {
+void OMXPlayerSubtitles::Process() {
+
+  try {
+    RenderLoop(m_font_path, m_italic_font_path, m_font_size, m_centered, m_ghost_box, m_lines, m_av_clock);
+    }
+  catch(Enforce_error& e) {
     if(!e.user_friendly_what().empty())
       printf("Error: %s\n", e.user_friendly_what().c_str());
-    CLog::Log(LOGERROR, "OMXPlayerSubtitles::RenderLoop threw %s (%s)",
-              typeid(e).name(), e.what());
-  }
-  catch(std::exception& e)
-  {
-    CLog::Log(LOGERROR, "OMXPlayerSubtitles::RenderLoop threw %s (%s)",
-              typeid(e).name(), e.what());
-  }
+    CLog::Log(LOGERROR, "OMXPlayerSubtitles::RenderLoop threw %s (%s)", typeid(e).name(), e.what());
+    }
+  catch(std::exception& e) {
+    CLog::Log(LOGERROR, "OMXPlayerSubtitles::RenderLoop threw %s (%s)", typeid(e).name(), e.what());
+    }
+
   m_thread_stopped.store(true, memory_order_relaxed);
-}
+  }
 //}}}
 //{{{
-template <typename Iterator> Iterator FindSubtitle (Iterator begin, Iterator end, int time)
-{
-  return upper_bound(begin, end, time,
-    [](int a, const Subtitle& b) { return a < b.stop; });
-}
+template <typename Iterator> Iterator FindSubtitle (Iterator begin, Iterator end, int time) {
+
+  return upper_bound(begin, end, time, [](int a, const Subtitle& b) { return a < b.stop; });
+  }
 //}}}
 //{{{
 void OMXPlayerSubtitles::RenderLoop (const string& font_path,
-           const string& italic_font_path,
-           float font_size,
-           bool centered,
-           bool ghost_box,
-           unsigned int lines,
-           OMXClock* clock)
-{
-  SubtitleRenderer renderer(m_display, m_layer,
-                            font_path,
-                            italic_font_path,
-                            font_size,
-                            0.01f, 0.06f,
-                            centered,
-                            0xDD,
-                            ghost_box ? 0x80 : 0,
-                            lines);
+                                     const string& italic_font_path,
+                                     float font_size,
+                                     bool centered,
+                                     bool ghost_box,
+                                     unsigned int lines,
+                                     OMXClock* clock) {
 
+  SubtitleRenderer renderer (m_display, m_layer,
+                             font_path, italic_font_path, font_size,
+                             0.01f, 0.06f, centered, 0xDD, ghost_box ? 0x80 : 0, lines);
   vector<Subtitle> subtitles;
 
   int prev_now{};
@@ -186,99 +170,62 @@ void OMXPlayerSubtitles::RenderLoop (const string& font_path,
   chrono::time_point<std::chrono::steady_clock> osd_stop;
   int delay{};
 
-  auto GetCurrentTime = [&]
-  {
+  //{{{
+  auto GetCurrentTime = [&] {
     return static_cast<int>(clock->OMXMediaTime()/1000) - delay;
   };
-
-  auto TryPrepare = [&](int time)
-  {
-    for(; next_index != subtitles.size(); ++next_index)
-    {
-      if(subtitles[next_index].stop > time)
-      {
+  //}}}
+  //{{{
+  auto TryPrepare = [&](int time) {
+    for(; next_index != subtitles.size(); ++next_index) {
+      if(subtitles[next_index].stop > time) {
         renderer.prepare(subtitles[next_index].text_lines);
         have_next = true;
         break;
+        }
       }
-    }
-  };
-
-  auto Reset = [&](int time)
-  {
+    };
+  //}}}
+  //{{{
+  auto Reset = [&](int time) {
     renderer.unprepare();
     current_stop = INT_MIN;
 
-    auto it = FindSubtitle(subtitles.begin(),
-                           subtitles.end(),
-                           time);
+    auto it = FindSubtitle(subtitles.begin(), subtitles.end(), time);
     next_index = it - subtitles.begin();
 
-    if(next_index != subtitles.size())
-    {
+    if (next_index != subtitles.size()) {
       renderer.prepare(subtitles[next_index].text_lines);
       have_next = true;
-    }
+      }
     else
-    {
       have_next = false;
-    }
-  };
+    };
+  //}}}
 
-  for(;;)
-  {
+  for(;;) {
     int timeout = INT_MAX;
 
-    if(!paused)
-    {
+    if (!paused) {
       auto now = GetCurrentTime();
-
-      int till_stop =
-        showing ? current_stop - now
-                : INT_MAX;
-
-      int till_next_start =
-        have_next ? subtitles[next_index].start - now
-                  : INT_MAX;
-
+      int till_stop = showing ? current_stop - now : INT_MAX;
+      int till_next_start = have_next ? subtitles[next_index].start - now : INT_MAX;
       timeout = min(min(till_stop, till_next_start), 1000);
-    }
+      }
 
-    if(osd)
-    {
-      procrustes(timeout,
-        chrono::duration_cast<std::chrono::milliseconds>(
-          osd_stop - chrono::steady_clock::now()).count());
-    }
+    if (osd) {
+      procrustes (timeout,
+        chrono::duration_cast<std::chrono::milliseconds>(osd_stop - chrono::steady_clock::now()).count());
+      }
 
-    m_mailbox.receive_wait(chrono::milliseconds(timeout),
-      [&](Message::Push&& args)
-      {
-        subtitles.push_back(std::move(args.subtitle));
-      },
-      [&](Message::Flush&& args)
-      {
-        subtitles = std::move(args.subtitles);
-        prev_now = INT_MAX;
-      },
-      [&](Message::Touch&&)
-      {
-      },
-      [&](Message::SetPaused&& args)
-      {
-        paused = args.value;
-      },
-      [&](Message::SetDelay&& args)
-      {
-        delay = args.value;
-        prev_now = INT_MAX;
-      },
-      [&](Message::Stop&&)
-      {
-        exit = true;
-      },
-      [&](Message::DisplayText&& args)
-      {
+    m_mailbox.receive_wait (chrono::milliseconds(timeout),
+      [&](Message::Push&& args) { subtitles.push_back(std::move(args.subtitle)); },
+      [&](Message::Flush&& args) { subtitles = std::move(args.subtitles); prev_now = INT_MAX; },
+      [&](Message::Touch&&) { },
+      [&](Message::SetPaused&& args) { paused = args.value; },
+      [&](Message::SetDelay&& args) { delay = args.value; prev_now = INT_MAX; },
+      [&](Message::Stop&&) { exit = true; },
+      [&](Message::DisplayText&& args) {
         renderer.prepare(args.text_lines);
         renderer.show_next();
         showing = true;
@@ -286,52 +233,43 @@ void OMXPlayerSubtitles::RenderLoop (const string& font_path,
         osd_stop = chrono::steady_clock::now() +
                    chrono::milliseconds(args.duration);
         prev_now = INT_MAX;
-      },
-      [&](Message::SetRect&& args)
-      {
-        renderer.set_rect(args.x1, args.y1, args.x2, args.y2);
-      });
+        },
+      [&](Message::SetRect&& args) { renderer.set_rect(args.x1, args.y1, args.x2, args.y2); }
+      );
 
-    if(exit) break;
+    if (exit)
+      break;
 
     auto now = GetCurrentTime();
 
-    if(now < prev_now || (have_next && subtitles[next_index].stop <= now))
-    {
+    if (now < prev_now || (have_next && subtitles[next_index].stop <= now))
       Reset(now);
-    }
-    else if(!have_next)
-    {
+    else if (!have_next)
       TryPrepare(now);
-    }
 
     prev_now = now;
 
-    if(osd && chrono::steady_clock::now() >= osd_stop)
+    if (osd && chrono::steady_clock::now() >= osd_stop)
       osd = false;
 
-    if(!osd && current_stop <= now)
-    {
-      if(have_next && subtitles[next_index].start <= now)
-      {
+    if (!osd && current_stop <= now) {
+      if(have_next && subtitles[next_index].start <= now) {
         renderer.show_next();
         // printf("show error: %i ms\n", now - subtitles[next_index].start);
         showing = true;
         current_stop = subtitles[next_index].stop;
-
         ++next_index;
         have_next = false;
         TryPrepare(now);
-      }
-      else if(showing)
-      {
+        }
+      else if(showing) {
         renderer.hide();
         // printf("hide error: %i ms\n", now - current_stop);
         showing = false;
+        }
       }
     }
   }
-}
 //}}}
 
 //{{{

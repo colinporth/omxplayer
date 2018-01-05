@@ -9,9 +9,6 @@
 using namespace std;
 
 //{{{
-/* Converts the action string from the config file into
- * the corresponding enum value
- */
 int convertStringToAction(string str_action)
 {
     if(str_action == "DECREASE_SPEED")

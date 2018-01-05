@@ -45,16 +45,15 @@
 //#define OMX_DEBUG_EVENTHANDLER
 #define CLASSNAME "COMXCoreComponent"
 //{{{
-static void add_timespecs(struct timespec &time, long millisecs)
-{
-   long long nsec = time.tv_nsec + (long long)millisecs * 1000000;
-   while (nsec > 1000000000)
-   {
-      time.tv_sec += 1;
-      nsec -= 1000000000;
-   }
-   time.tv_nsec = nsec;
-}
+static void add_timespecs(struct timespec &time, long millisecs) {
+
+  long long nsec = time.tv_nsec + (long long)millisecs * 1000000;
+  while (nsec > 1000000000) {
+    time.tv_sec += 1;
+    nsec -= 1000000000;
+    }
+  time.tv_nsec = nsec;
+  }
 //}}}
 
 //{{{

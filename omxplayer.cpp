@@ -33,7 +33,6 @@
 #include <utility>
 
 #define AV_NOWARN_DEPRECATED
-
 extern "C" {
   #include <libavformat/avformat.h>
   #include <libavutil/avutil.h>
@@ -76,40 +75,85 @@ using namespace std;
 const float kFontSize = 0.035f;
 const string kFontPath = "/usr/share/fonts/truetype/freefont/FreeSans.ttf";
 const string kItalicFontPath = "/usr/share/fonts/truetype/freefont/FreeSansOblique.ttf";
+
+const int font_opt        = 0x100;
+const int italic_font_opt = 0x201;
+const int font_size_opt   = 0x101;
+const int align_opt       = 0x102;
+const int no_ghost_box_opt = 0x203;
+const int subtitles_opt   = 0x103;
+const int lines_opt       = 0x104;
+const int pos_opt         = 0x105;
+const int vol_opt         = 0x106;
+const int audio_fifo_opt  = 0x107;
+const int video_fifo_opt  = 0x108;
+const int audio_queue_opt = 0x109;
+const int video_queue_opt = 0x10a;
+const int no_deinterlace_opt = 0x10b;
+const int threshold_opt   = 0x10c;
+const int timeout_opt     = 0x10f;
+const int boost_on_downmix_opt = 0x200;
+const int no_boost_on_downmix_opt = 0x207;
+const int key_config_opt  = 0x10d;
+const int amp_opt         = 0x10e;
+const int no_osd_opt      = 0x202;
+const int orientation_opt = 0x204;
+const int fps_opt         = 0x208;
+const int live_opt        = 0x205;
+const int layout_opt      = 0x206;
+const int dbus_name_opt   = 0x209;
+const int loop_opt        = 0x20a;
+const int layer_opt       = 0x20b;
+const int no_keys_opt     = 0x20c;
+const int anaglyph_opt    = 0x20d;
+const int native_deinterlace_opt = 0x20e;
+const int display_opt     = 0x20f;
+const int alpha_opt       = 0x210;
+const int advanced_opt    = 0x211;
+const int aspect_mode_opt = 0x212;
+const int crop_opt        = 0x213;
+const int http_cookie_opt = 0x300;
+const int http_user_agent_opt = 0x301;
+const int lavfdopts_opt   = 0x400;
+const int avdict_opt      = 0x401;
 //}}}
 //{{{  vars
-enum PCMChannels  *m_pChannelMap        = NULL;
-volatile sig_atomic_t g_abort           = false;
-long              m_Volume              = 0;
-long              m_Amplification       = 0;
-bool              m_NativeDeinterlace   = false;
-bool              m_HWDecode            = false;
+enum PCMChannels* m_pChannelMap = NULL;
+volatile sig_atomic_t g_abort = false;
 
-bool              m_Pause               = false;
-OMXReader         m_omx_reader;
-int               m_audio_index_use     = 0;
-OMXClock          *m_av_clock           = NULL;
-Keyboard          *m_keyboard           = NULL;
-OMXAudioConfig    m_config_audio;
-OMXVideoConfig    m_config_video;
-OMXPacket         *m_omx_pkt            = NULL;
-bool              m_no_hdmi_clock_sync  = false;
-bool              m_stop                = false;
-int               m_subtitle_index      = -1;
-DllBcmHost        m_BcmHost;
-OMXPlayerVideo    m_player_video;
-OMXPlayerAudio    m_player_audio;
+DllBcmHost m_BcmHost;
+
+Keyboard* m_keyboard           = NULL;
+OMXReader m_omx_reader;
+OMXClock* m_av_clock           = NULL;
+OMXAudioConfig m_config_audio;
+OMXVideoConfig m_config_video;
+OMXPacket* m_omx_pkt            = NULL;
+OMXPlayerVideo m_player_video;
+OMXPlayerAudio m_player_audio;
 OMXPlayerSubtitles  m_player_subtitles;
+
+long m_Volume = 0;
+long m_Amplification = 0;
+bool m_HWDecode = false;
+
+bool m_NativeDeinterlace = false;
+
+bool m_Pause = false;
+int m_audio_index_use = 0;
+int m_subtitle_index = -1;
+bool m_no_hdmi_clock_sync = false;
 
 bool mHasVideo = false;
 bool mHasAudio = false;
 bool mHasSubtitle = false;
+
 bool m_gen_log = false;
 bool m_loop = false;
 //}}}
 
 //{{{
-void sig_handler (int s)
+void sigHandler (int s)
 {
   if (s==SIGINT && !g_abort)
   {
@@ -165,18 +209,18 @@ void callbackTvServiceCallback (void *userdata, uint32_t reason, uint32_t param1
   sem_t* tv_synced = (sem_t*)userdata;
 
   switch(reason) {
-    case VC_HDMI_UNPLUGGED:
-      break;
-
-    case VC_HDMI_STANDBY:
-      break;
-
     case VC_SDTV_NTSC:
     case VC_SDTV_PAL:
     case VC_HDMI_HDMI:
     case VC_HDMI_DVI:
       // Signal we are ready now
       sem_post(tv_synced);
+      break;
+
+    case VC_HDMI_UNPLUGGED:
+      break;
+
+    case VC_HDMI_STANDBY:
       break;
 
     default:
@@ -188,15 +232,10 @@ void callbackTvServiceCallback (void *userdata, uint32_t reason, uint32_t param1
 //{{{
 void setVideoMode (int width, int height, int fpsrate, int fpsscale) {
 
-  int32_t num_modes = 0;
-  int i;
-
   HDMI_RES_GROUP_T prefer_group;
   HDMI_RES_GROUP_T group = HDMI_RES_GROUP_CEA;
 
   float fps = 60.0f; // better to force to higher rate if no information is known
-  uint32_t prefer_mode;
-
   if (fpsrate && fpsscale)
     fps = DVD_TIME_BASE / OMXReader::NormalizeFrameduration((double)DVD_TIME_BASE * fpsscale / fpsrate);
 
@@ -204,25 +243,27 @@ void setVideoMode (int width, int height, int fpsrate, int fpsscale) {
   TV_SUPPORTED_MODE_NEW_T *supported_modes = NULL;
 
   // query the number of modes first
-  int max_supported_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes_new(group, NULL, 0, &prefer_group, &prefer_mode);
+  uint32_t prefer_mode;
+  int max_supported_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes_new (group, NULL, 0, &prefer_group, &prefer_mode);
   if (max_supported_modes > 0)
     supported_modes = new TV_SUPPORTED_MODE_NEW_T[max_supported_modes];
+
+  int32_t num_modes = 0;
   if (supported_modes) {
-    num_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes_new(group,
-        supported_modes, max_supported_modes, &prefer_group, &prefer_mode);
-    if (m_gen_log) {
-      CLog::Log(LOGDEBUG, "EGL get supported modes (%d) = %d, prefer_group=%x, prefer_mode=%x\n",
-                group, num_modes, prefer_group, prefer_mode);
-      }
+    num_modes = m_BcmHost.vc_tv_hdmi_get_supported_modes_new (
+        group, supported_modes, max_supported_modes, &prefer_group, &prefer_mode);
+    if (m_gen_log)
+      CLog::Log (LOGDEBUG, "EGL get supported modes (%d) = %d, prefer_group=%x, prefer_mode=%x\n",
+                 group, num_modes, prefer_group, prefer_mode);
     }
 
-  TV_SUPPORTED_MODE_NEW_T *tv_found = NULL;
-  if (num_modes > 0 && prefer_group != HDMI_RES_GROUP_INVALID) {
+  TV_SUPPORTED_MODE_NEW_T* tv_found = NULL;
+  if ((num_modes > 0) && (prefer_group != HDMI_RES_GROUP_INVALID)) {
     //{{{  score modes
     uint32_t best_score = 1<<30;
     uint32_t scan_mode = m_NativeDeinterlace;
 
-    for (i=0; i<num_modes; i++) {
+    for (int i = 0; i < num_modes; i++) {
       TV_SUPPORTED_MODE_NEW_T *tv = supported_modes + i;
       uint32_t score = 0;
       uint32_t w = tv->width;
@@ -272,8 +313,8 @@ void setVideoMode (int width, int height, int fpsrate, int fpsscale) {
   if (tv_found) {
     //{{{  set mode
     char response[80];
-    printf("Output mode %d: %dx%d@%d %s%s:%x\n", tv_found->code, tv_found->width, tv_found->height,
-           tv_found->frame_rate, tv_found->native?"N":"", tv_found->scan_mode?"I":"", tv_found->code);
+    printf ("Output mode %d: %dx%d@%d %s%s:%x\n", tv_found->code, tv_found->width, tv_found->height,
+            tv_found->frame_rate, tv_found->native?"N":"", tv_found->scan_mode?"I":"", tv_found->code);
     if (m_NativeDeinterlace && tv_found->scan_mode)
       vc_gencmd (response, sizeof response, "hvs_update_fields %d", 1);
 
@@ -380,89 +421,33 @@ bool isPipe (const string& str) {
 //{{{
 int main (int argc, char* argv[]) {
 
-  //{{{  const
-  const int font_opt        = 0x100;
-  const int italic_font_opt = 0x201;
-  const int font_size_opt   = 0x101;
-  const int align_opt       = 0x102;
-  const int no_ghost_box_opt = 0x203;
-  const int subtitles_opt   = 0x103;
-  const int lines_opt       = 0x104;
-  const int pos_opt         = 0x105;
-  const int vol_opt         = 0x106;
-  const int audio_fifo_opt  = 0x107;
-  const int video_fifo_opt  = 0x108;
-  const int audio_queue_opt = 0x109;
-  const int video_queue_opt = 0x10a;
-  const int no_deinterlace_opt = 0x10b;
-  const int threshold_opt   = 0x10c;
-  const int timeout_opt     = 0x10f;
-  const int boost_on_downmix_opt = 0x200;
-  const int no_boost_on_downmix_opt = 0x207;
-  const int key_config_opt  = 0x10d;
-  const int amp_opt         = 0x10e;
-  const int no_osd_opt      = 0x202;
-  const int orientation_opt = 0x204;
-  const int fps_opt         = 0x208;
-  const int live_opt        = 0x205;
-  const int layout_opt      = 0x206;
-  const int dbus_name_opt   = 0x209;
-  const int loop_opt        = 0x20a;
-  const int layer_opt       = 0x20b;
-  const int no_keys_opt     = 0x20c;
-  const int anaglyph_opt    = 0x20d;
-  const int native_deinterlace_opt = 0x20e;
-  const int display_opt     = 0x20f;
-  const int alpha_opt       = 0x210;
-  const int advanced_opt    = 0x211;
-  const int aspect_mode_opt = 0x212;
-  const int crop_opt        = 0x213;
-  const int http_cookie_opt = 0x300;
-  const int http_user_agent_opt = 0x301;
-  const int lavfdopts_opt   = 0x400;
-  const int avdict_opt      = 0x401;
-  //}}}
   //{{{  vars
-  bool m_send_eos            = false;
-  bool m_seek_flush          = false;
-  string m_filename;
+  bool m_send_eos = false;
+  bool m_seek_flush = false;
 
   double m_incr = 0;
   double m_loop_from = 0;
 
-  CRBP      g_RBP;
-  COMXCore  g_OMX;
-
   double startpts = 0;
   bool m_refresh = false;
+  bool m_stop = false;
 
   bool sentStarted = false;
-  float m_threshold = -1.0f; // amount of audio/video required to come out of buffering
-  float m_timeout = 10.0f; // amount of time file/network operation can stall for before timing out
-  int m_orientation = -1; // unset
-  float m_fps = 0.0f; // unset
 
-  TV_DISPLAY_STATE_T tv_state;
   double last_seek_pos = 0;
   bool idle = false;
-
-  string m_cookie = "";
-  string m_user_agent = "";
-  string m_lavfdopts = "";
-  string m_avdict = "";
 
   float m_latency = 0.0f;
   double m_last_check_time = 0.0;
 
   vector<Subtitle> external_subtitles;
   //}}}
-
   printf ("omxplayer %s\n", VERSION_DATE);
   //{{{  sig handlers
-  signal (SIGSEGV, sig_handler);
-  signal (SIGABRT, sig_handler);
-  signal (SIGFPE, sig_handler);
-  signal (SIGINT, sig_handler);
+  signal (SIGSEGV, sigHandler);
+  signal (SIGABRT, sigHandler);
+  signal (SIGFPE, sigHandler);
+  signal (SIGINT, sigHandler);
   //}}}
 
   //{{{  options
@@ -531,6 +516,16 @@ int main (int argc, char* argv[]) {
     { 0, 0, 0, 0 }
   };
   //}}}
+
+  string m_cookie = "";
+  string m_user_agent = "";
+  string m_lavfdopts = "";
+  string m_avdict = "";
+
+  float m_threshold = -1.0f; // amount of audio/video required to come out of buffering
+  float m_timeout = 10.0f;   // amount of time file/network operation can stall for before timing out
+  int m_orientation = -1;    // unset
+  float m_fps = 0.0f;        // unset
 
   int c;
   while ((c = getopt_long(argc, argv, "wiIhvkn:l:o:cslb::pd3:Myzt:rg", longopts, NULL)) != -1) {
@@ -634,18 +629,16 @@ int main (int argc, char* argv[]) {
         break;
       //}}}
       //{{{
-      case 'l':
-        {
-          if(strchr(optarg, ':')) {
-            unsigned int h, m, s;
-            if(sscanf(optarg, "%u:%u:%u", &h, &m, &s) == 3)
-              m_incr = h*3600 + m*60 + s;
+      case 'l': {
+        if(strchr(optarg, ':')) {
+          unsigned int h, m, s;
+          if (sscanf(optarg, "%u:%u:%u", &h, &m, &s) == 3)
+            m_incr = h*3600 + m*60 + s;
           }
-          else {
-            m_incr = atof(optarg);
-          }
-          if(m_loop)
-            m_loop_from = m_incr;
+        else
+          m_incr = atof(optarg);
+        if (m_loop)
+          m_loop_from = m_incr;
         }
         break;
       //}}}
@@ -815,7 +808,7 @@ int main (int argc, char* argv[]) {
       }
     }
   //}}}
-  m_filename = argv[optind];
+  string m_filename = argv[optind];
   if (!isURL (m_filename) && !isPipe (m_filename) && !exists (m_filename)) {
     //{{{  error, return
     printf ("File \"%s\" not found.\n", m_filename.c_str());
@@ -831,8 +824,12 @@ int main (int argc, char* argv[]) {
     CLog::SetLogLevel(LOG_LEVEL_NONE);
   //}}}
 
+  CRBP g_RBP;
   g_RBP.Initialize();
+
+  COMXCore g_OMX;
   g_OMX.Initialize();
+
   blankBackground (true);
 
   m_av_clock = new OMXClock();
@@ -875,6 +872,7 @@ int main (int argc, char* argv[]) {
     m_omx_reader.SetActiveStream (OMXSTREAM_AUDIO, m_audio_index_use-1);
 
   //{{{  video
+  TV_DISPLAY_STATE_T tv_state;
   if (mHasVideo && m_refresh) {
     memset (&tv_state, 0, sizeof(TV_DISPLAY_STATE_T));
     m_BcmHost.vc_tv_get_display_state (&tv_state);

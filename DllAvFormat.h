@@ -6,6 +6,7 @@
 #include "DynamicDll.h"
 #include "DllAvCodec.h"
 
+//{{{
 extern "C" {
 #ifndef HAVE_MMX
 #define HAVE_MMX
@@ -26,6 +27,7 @@ extern "C" {
   #include "libavformat/avformat.h"
 #endif
 }
+//}}}
 
 /* Flag introduced without a version bump */
 #ifndef AVSEEK_FORCE
@@ -34,8 +36,7 @@ extern "C" {
 
 typedef int64_t offset_t;
 
-class DllAvFormatInterface
-{
+class DllAvFormatInterface {
 public:
   virtual ~DllAvFormatInterface() {}
   virtual void av_register_all_dont_call(void)=0;

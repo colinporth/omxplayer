@@ -813,13 +813,13 @@ int main (int argc, char* argv[]) {
   blankBackground (true);
 
   m_av_clock = new OMXClock();
+
   map<int,int> keymap = KeyConfig::buildDefaultKeymap();
   m_keyboard = new Keyboard();
   m_keyboard->setKeymap (keymap);
 
   if (!m_omx_reader.Open (m_filename.c_str(), true, m_config_audio.is_live, m_timeout,
-                          m_cookie.c_str(), m_user_agent.c_str(),
-                          m_lavfdopts.c_str(), m_avdict.c_str()))
+                          m_cookie.c_str(), m_user_agent.c_str(), m_lavfdopts.c_str(), m_avdict.c_str()))
     goto exit;
 
   mHasVideo = m_omx_reader.VideoStreamCount();
@@ -1458,8 +1458,8 @@ int main (int argc, char* argv[]) {
     //}}}
 
 exit:
-  auto t = (unsigned)(m_av_clock->OMXMediaTime()*1e-6);
-  printf ("Stopped at: %02d:%02d:%02d\n", (t/3600), (t/60)%60, t%60);
+  auto stopTime = (unsigned)(m_av_clock->OMXMediaTime()*1e-6);
+  printf ("Stopped at: %02d:%02d:%02d\n", (stopTime / 3600), (stopTime / 60) % 60, stopTime % 60);
 
   if (m_NativeDeinterlace) {
     char response[80];

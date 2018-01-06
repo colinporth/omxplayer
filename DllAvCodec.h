@@ -3,10 +3,12 @@
 #if (defined HAVE_CONFIG_H) && (!defined WIN32)
 	#include "config.h"
 #endif
+
 #include "DynamicDll.h"
 #include "DllAvUtil.h"
 #include "utils/log.h"
 
+//{{{
 extern "C" {
 #ifndef HAVE_MMX
 #define HAVE_MMX
@@ -42,11 +44,9 @@ extern "C" {
 	#include "libavcodec/avcodec.h"
 #endif
 }
+//}}}
 
-//#include "threads/SingleLock.h"
-
-class DllAvCodecInterface
-{
+class DllAvCodecInterface {
 public:
 	virtual ~DllAvCodecInterface() {}
 	virtual void avcodec_register_all(void)=0;

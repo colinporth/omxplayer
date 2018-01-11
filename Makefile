@@ -13,7 +13,6 @@ LDFLAGS+= -L ./ \
 	  -l vchiq_arm \
 	  -l vchostif \
 	  -l vcos \
-	  -l dbus-1 \
 	  -l rt \
 	  -l pthread \
 	  -l pcre \
